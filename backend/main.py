@@ -6,6 +6,7 @@ Complete implementation matching frontend features
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import shutil
@@ -48,13 +49,17 @@ def get_db():
     finally:
         db_session.close()
 
+# Mount frontend directory for potential assets (though index.html is single file)
+# Use absolute path binding to be safe
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
+
+# Mount static files if needed (e.g. for images/css if separated later)
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
 @app.get("/")
-def root():
-    return {
-        "message": "Welcome to KEEP API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+async def root():
+    return FileResponse(os.path.join(FRONTEND_DIR, 'index.html'))
 
 # ============================================================================
 # AUTH ROUTES (Simplified - extend with proper JWT in production)
