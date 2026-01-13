@@ -1,0 +1,2523 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KEEP - Personal Health Vault</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            keep: {
+              dark: '#0F5A3C',
+              green: '#1B4D3E',
+              light: '#E6F4F1',
+              accent: '#A8D8C9',
+              text: '#1F2937',
+              muted: '#6B7280',
+              bg: '#F3F4F6'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+            'nav': '0 -4px 6px -1px rgba(0, 0, 0, 0.05)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sidebar-link.active {
+      background-color: #E6F4F1;
+      color: #0F5A3C;
+      font-weight: 600;
+    }
+
+    .sidebar-link:hover:not(.active) {
+      background-color: #F3F4F6;
+    }
+
+    .nav-item.active {
+      color: #0F5A3C;
+      font-weight: 600;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Safe area for mobile bottom nav */
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  </style>
+</head>
+
+<body class="text-gray-900 h-screen flex overflow-hidden bg-gray-50">
+
+  <!-- DESKTOP SIDEBAR (Hidden on Mobile) -->
+  <aside class="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col flex-shrink-0 z-20 h-full">
+    <div class="p-6 pb-8">
+      <!-- Custom Logo -->
+      <div class="flex items-end gap-1 select-none">
+        <h1 class="text-4xl font-serif font-bold text-keep-dark tracking-tight leading-none"
+          style="font-family: 'Playfair Display', serif;">keep</h1>
+        <div class="flex flex-col gap-[2px] mb-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#A8D8C9]"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-[#2E7D62]"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-[#0F5A3C]"></span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-4 space-y-1">
+      <a href="#" onclick="event.preventDefault(); app.nav('dashboard')" id="nav-dashboard"
+        class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-colors">
+        <i class="fas fa-th-large w-5 text-center"></i>
+        <span class="text-sm font-medium">Dashboard</span>
+      </a>
+      <a href="#" onclick="event.preventDefault(); app.nav('records')" id="nav-records"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-colors">
+        <i class="far fa-folder-open w-5 text-center"></i>
+        <span class="text-sm font-medium">Records</span>
+      </a>
+      <a href="#" onclick="event.preventDefault(); app.nav('timeline')" id="nav-timeline"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-colors">
+        <i class="fas fa-chart-line w-5 text-center"></i>
+        <span class="text-sm font-medium">Timeline</span>
+      </a>
+      <a href="#" onclick="event.preventDefault(); app.nav('sharing')" id="nav-sharing"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-colors">
+        <i class="fas fa-share-alt w-5 text-center"></i>
+        <span class="text-sm font-medium">Sharing</span>
+      </a>
+      <a href="#" onclick="event.preventDefault(); app.nav('profile')" id="nav-profile"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 transition-colors">
+        <i class="far fa-user w-5 text-center"></i>
+        <span class="text-sm font-medium">Profile</span>
+      </a>
+
+      <div class="pt-4">
+        <a href="#" onclick="event.preventDefault(); app.nav('upload')" id="nav-upload"
+          class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-keep-dark bg-keep-light font-semibold transition-colors">
+          <i class="fas fa-cloud-upload-alt w-5 text-center"></i>
+          <span class="text-sm">Upload</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="p-6 mt-auto border-t border-gray-100">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 rounded-full bg-keep-accent flex items-center justify-center text-keep-dark font-bold text-xs"
+          id="sidebar-avatar">U</div>
+        <div class="overflow-hidden">
+          <p class="text-sm font-medium text-gray-900 truncate" id="sidebar-name">User</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative h-full">
+
+    <!-- TOP HEADER -->
+    <header class="h-16 flex items-center justify-between px-4 md:px-8 bg-white border-b border-gray-200 flex-shrink-0">
+      <!-- Mobile Logo -->
+      <div class="md:hidden flex items-end gap-1 select-none">
+        <h1 class="text-2xl font-serif font-bold text-keep-dark tracking-tight leading-none"
+          style="font-family: 'Playfair Display', serif;">keep</h1>
+        <div class="flex flex-col gap-[1px] mb-1">
+          <span class="w-1 h-1 rounded-full bg-[#A8D8C9]"></span>
+          <span class="w-1 h-1 rounded-full bg-[#2E7D62]"></span>
+          <span class="w-1 h-1 rounded-full bg-[#0F5A3C]"></span>
+        </div>
+      </div>
+
+      <div class="hidden md:block text-sm text-gray-500" id="header-date"></div>
+
+      <div class="flex items-center gap-4 md:gap-6">
+        <button class="text-gray-400 hover:text-gray-600 relative">
+          <i class="far fa-bell text-xl"></i>
+          <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+        </button>
+
+        <!-- Profile Dropdown Trigger -->
+        <div class="relative">
+          <button onclick="app.toggleProfileMenu()"
+            class="flex items-center gap-2 hover:bg-gray-50 p-1 rounded-lg transition-colors">
+            <div
+              class="w-8 h-8 rounded-full bg-keep-accent flex items-center justify-center text-keep-dark font-bold text-xs"
+              id="header-avatar">U</div>
+            <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+          </button>
+
+          <!-- Profile Dropdown Menu -->
+          <div id="profile-menu"
+            class="hidden absolute right-0 top-12 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden fade-in">
+            <div class="p-3 border-b border-gray-50 bg-gray-50">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Switch Profile</p>
+            </div>
+            <div class="p-1" id="profile-menu-list">
+              <!-- Profiles will be dynamically loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- SCROLLABLE CONTENT -->
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-8 scrollbar-hide" id="main-scroll">
+
+      <!-- VIEW: DASHBOARD -->
+      <section id="view-dashboard" class="fade-in max-w-5xl mx-auto pt-4 md:pt-6">
+        <div class="mb-6 md:mb-8">
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-1" id="welcome-msg">Welcome!</h1>
+          <p class="text-sm md:text-base text-gray-500">Here is a summary of your health records.</p>
+        </div>
+
+        <!-- Stats Card -->
+        <div class="bg-white rounded-2xl p-6 md:p-8 shadow-card border border-gray-100 mb-6 md:mb-8">
+          <p class="text-gray-500 text-xs md:text-sm font-medium mb-2">Total Health Records</p>
+          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-2" id="total-records-count">0</h2>
+          <p class="text-gray-500 text-xs md:text-sm mb-6 md:mb-8">Everything's securely stored and backed up.</p>
+
+          <button onclick="app.nav('sharing')"
+            class="w-full md:w-auto bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium px-6 py-3 rounded-lg transition-colors text-sm">
+            Share medical history
+          </button>
+        </div>
+
+        <!-- Banner -->
+        <div class="bg-keep-dark rounded-2xl p-6 shadow-card mb-6 md:mb-8 flex items-center gap-4 md:gap-6 text-white">
+          <div class="w-10 h-10 md:w-12 md:h-12 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span class="font-bold text-sm">k:</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base md:text-lg mb-1">Wherever life takes you.</h3>
+            <p class="text-xs md:text-sm text-white/80">Keep ensures your medical history is private, and accessible
+              anytime, anywhere.</p>
+          </div>
+        </div>
+
+        <!-- Recent Records -->
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg md:text-xl font-bold text-gray-900">Recent Records</h3>
+            <button onclick="app.nav('records')" class="text-sm font-medium text-keep-dark hover:underline">View
+              All</button>
+          </div>
+          <div class="space-y-3" id="dashboard-list"></div>
+        </div>
+      </section>
+
+      <!-- VIEW: RECORDS -->
+      <section id="view-records" class="hidden fade-in max-w-5xl mx-auto pt-4 md:pt-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+          <h1 class="text-2xl font-bold text-gray-900">All Records</h1>
+          <div class="flex gap-3 w-full md:w-auto">
+            <div class="relative flex-1 md:flex-none">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+              <input type="text" placeholder="Search records..."
+                class="w-full md:w-64 pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-keep-green shadow-sm">
+            </div>
+            <button onclick="app.nav('upload')"
+              class="hidden md:flex bg-keep-dark hover:bg-keep-green text-white px-4 py-2 rounded-lg text-sm font-medium items-center gap-2 transition-colors">
+              <i class="fas fa-plus"></i> Upload
+            </button>
+          </div>
+        </div>
+        <div class="space-y-3" id="records-list"></div>
+      </section>
+
+      <!-- VIEW: RECORD DETAIL -->
+      <section id="view-record-detail" class="hidden fade-in max-w-5xl mx-auto pt-4 md:pt-6">
+        <div class="mb-6">
+          <button onclick="app.nav('records')"
+            class="text-gray-500 hover:text-gray-900 flex items-center gap-2 text-sm font-medium mb-4">
+            <i class="fas fa-arrow-left"></i> Back to Records
+          </button>
+          <h1 class="text-2xl font-bold text-gray-900" id="detail-record-title">Record Details</h1>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Left: Document Preview -->
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-card p-6">
+            <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <i class="far fa-file-alt text-keep-green"></i> Document
+            </h3>
+            <div
+              class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 p-8 flex flex-col items-center justify-center min-h-[300px]"
+              id="detail-document-preview">
+              <i class="fas fa-file-pdf text-gray-300 text-6xl mb-4"></i>
+              <p class="text-gray-500 text-sm" id="detail-file-name">No document available</p>
+            </div>
+            <div class="flex gap-3 mt-4" id="detail-document-actions">
+              <button onclick="app.viewDocument()"
+                class="flex-1 bg-keep-light hover:bg-keep-accent/30 text-keep-dark font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+                <i class="far fa-eye mr-2"></i> View
+              </button>
+              <button onclick="app.downloadDocument()"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+                <i class="fas fa-download mr-2"></i> Download
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: AI Summary -->
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-card p-6">
+            <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <i class="fas fa-magic text-keep-green"></i> AI Analysis
+            </h3>
+            <div class="space-y-4" id="detail-summary-content">
+              <p class="text-gray-500 text-sm">No analysis available</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: TIMELINE -->
+      <section id="view-timeline" class="hidden fade-in max-w-3xl mx-auto pt-4 md:pt-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Health Timeline</h1>
+        <div class="relative border-l-2 border-gray-200 ml-3 md:ml-6 space-y-8 pb-8" id="timeline-container"></div>
+      </section>
+
+      <!-- VIEW: SHARING -->
+      <section id="view-sharing" class="hidden fade-in max-w-5xl mx-auto pt-4 md:pt-6">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-gray-900">Sharing Center</h1>
+          <button onclick="app.openShareModal()"
+            class="bg-keep-dark hover:bg-keep-green text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm">
+            + Create Share Link
+          </button>
+        </div>
+        <!-- Desktop Table -->
+        <div class="hidden md:block bg-white rounded-xl shadow-card border border-gray-200 overflow-hidden">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 border-b border-gray-100 text-gray-500">
+              <tr>
+                <th class="px-6 py-4 font-medium">Packet Name</th>
+                <th class="px-6 py-4 font-medium">Recipient</th>
+                <th class="px-6 py-4 font-medium">Contents</th>
+                <th class="px-6 py-4 font-medium">Status</th>
+                <th class="px-6 py-4 font-medium">Expires</th>
+                <th class="px-6 py-4 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50" id="sharing-table-body"></tbody>
+          </table>
+        </div>
+        <!-- Mobile List -->
+        <div class="md:hidden space-y-4" id="sharing-mobile-list"></div>
+      </section>
+
+      <!-- VIEW: PROFILE -->
+      <section id="view-profile" class="hidden fade-in max-w-4xl mx-auto pt-4 md:pt-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Profile & Settings</h1>
+
+        <!-- Profile Header -->
+        <div class="bg-white rounded-2xl p-6 shadow-card border border-gray-100 mb-6 flex items-center gap-4 md:gap-6">
+          <div
+            class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-keep-accent flex items-center justify-center text-keep-dark text-xl md:text-2xl font-bold"
+            id="profile-page-avatar">U</div>
+          <div>
+            <h2 class="text-xl font-bold text-gray-900" id="profile-page-name">User</h2>
+            <p class="text-sm text-gray-500" id="profile-page-email">user@example.com</p>
+            <span class="inline-block mt-2 px-2 py-1 bg-keep-light text-keep-dark text-xs font-semibold rounded-md"
+              id="profile-page-role">Primary Account Holder</span>
+          </div>
+        </div>
+
+        <!-- Family Section -->
+        <div class="mb-8">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Family Profiles</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="family-grid"></div>
+        </div>
+
+        <!-- Settings Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <!-- Basic Info -->
+          <div class="bg-white rounded-xl p-6 shadow-card border border-gray-100">
+            <h3 class="font-bold text-gray-900 mb-4">Basic Information</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-500">Full Name</label>
+                <input type="text" id="profile-input-name" placeholder="Your Name"
+                  class="w-full mt-1 p-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-keep-green outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">Phone</label>
+                <input type="text" id="profile-input-phone" placeholder="+1 (555) 000-0000"
+                  class="w-full mt-1 p-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-keep-green outline-none">
+              </div>
+              <button onclick="app.updateProfile()"
+                class="w-full mt-2 bg-keep-dark text-white py-2 rounded-lg text-sm font-medium hover:bg-keep-green transition-colors">
+                Save Changes
+              </button>
+            </div>
+          </div>
+
+          <!-- Security -->
+          <div class="bg-white rounded-xl p-6 shadow-card border border-gray-100">
+            <h3 class="font-bold text-gray-900 mb-4">Security</h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Two-Factor Auth</span>
+                <div class="w-10 h-6 bg-green-500 rounded-full relative cursor-pointer">
+                  <div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                </div>
+              </div>
+              <button onclick="app.triggerPasswordReset()"
+                class="w-full py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Change
+                Password</button>
+              <button onclick="signOut()"
+                class="w-full py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+                <i class="fas fa-sign-out-alt mr-2"></i> Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Actions -->
+        <div class="bg-white rounded-xl p-6 shadow-card border border-gray-100 mb-8">
+          <h3 class="font-bold text-gray-900 mb-4">Account Actions</h3>
+          <div class="flex flex-col md:flex-row gap-4">
+            <button onclick="alert('Downloading data archive... (stub)')"
+              class="flex-1 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-600">
+              <i class="fas fa-download mr-2"></i> Download My Data
+            </button>
+            <button
+              onclick="confirm('Are you sure you want to delete your account? This cannot be undone.') && alert('Account deletion request submitted (stub)')"
+              class="flex-1 py-2 border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+              <i class="fas fa-trash-alt mr-2"></i> Delete Account
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: UPLOAD -->
+      <section id="view-upload" class="hidden fade-in max-w-5xl mx-auto pt-4 md:pt-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Upload New Health Record</h1>
+
+        <!-- Upload Area -->
+        <div id="upload-drop-zone"
+          class="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-8 md:p-12 flex flex-col items-center justify-center text-center hover:border-keep-green transition-colors cursor-pointer mb-6"
+          onclick="document.getElementById('file-input').click()">
+          <div class="w-16 h-16 bg-keep-light rounded-full flex items-center justify-center text-keep-dark mb-4">
+            <i class="fas fa-cloud-upload-alt text-2xl"></i>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-2">Drag & drop files here</h3>
+          <p class="text-sm text-gray-500 mb-4">Supported: PDF, JPG/PNG, DOCX</p>
+          <button
+            class="bg-keep-light hover:bg-keep-accent/30 text-keep-dark font-medium px-4 py-2 rounded-lg text-sm">Or
+            browse your computer</button>
+          <input type="file" id="file-input" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.docx"
+            onchange="app.handleUpload(this)">
+        </div>
+
+        <!-- Review Form (hidden initially) -->
+        <div id="upload-review-form"
+          class="hidden bg-white rounded-2xl border border-gray-200 shadow-card overflow-hidden">
+          <div class="p-6 border-b border-gray-100">
+            <h2 class="text-xl font-bold text-gray-900">Review and Confirm Information</h2>
+            <p class="text-sm text-gray-500">We extracted these fields. Edit before saving.</p>
+          </div>
+
+          <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Left: Form Fields -->
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Document Name</label>
+                  <input type="text" id="upload-doc-name"
+                    class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-keep-green">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Date of Visit</label>
+                  <input type="date" id="upload-date"
+                    class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-keep-green">
+                </div>
+              </div>
+
+              <!-- Right: Document Preview -->
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Document Preview</label>
+                <div
+                  class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center justify-center min-h-[200px]"
+                  id="upload-preview">
+                  <i class="fas fa-file-pdf text-gray-300 text-5xl mb-3"></i>
+                  <p class="text-gray-500 text-sm" id="upload-file-name">document.pdf</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <button type="button" onclick="app.cancelUpload()"
+              class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors">Cancel</button>
+            <button type="button" onclick="event.preventDefault(); app.saveUpload()"
+              class="px-4 py-2 text-sm font-medium text-white bg-keep-dark hover:bg-keep-green rounded-lg transition-colors">
+              <i class="fas fa-check mr-2"></i> Save and View Summary
+            </button>
+          </div>
+        </div>
+
+        <!-- Processing State (hidden initially) -->
+        <div id="upload-processing"
+          class="hidden bg-white rounded-2xl border border-gray-200 shadow-card p-8 md:p-12 text-center">
+          <div class="mb-6 relative">
+            <div class="w-20 h-20 border-4 border-gray-100 rounded-full mx-auto"></div>
+            <div
+              class="w-20 h-20 border-4 border-keep-green border-t-transparent rounded-full mx-auto absolute top-0 left-1/2 transform -translate-x-1/2 animate-spin">
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <i class="fas fa-magic text-keep-green text-xl animate-pulse"></i>
+            </div>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2" id="processing-title">Analyzing Document</h3>
+          <p class="text-gray-500 max-w-md mx-auto mb-6" id="processing-status">Please wait while our AI extracts text,
+            generates embeddings, and creates a summary...</p>
+
+          <div class="max-w-xs mx-auto bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div class="bg-keep-green h-full rounded-full animate-pulse w-2/3"></div>
+          </div>
+        </div>
+
+        <!-- AI Summary Display (hidden initially) -->
+        <div id="upload-summary-display"
+          class="hidden bg-white rounded-2xl border border-gray-200 shadow-card p-6 mt-6">
+          <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i class="fas fa-magic text-keep-green"></i> AI Analysis Complete
+          </h3>
+          <div id="upload-summary-content" class="space-y-4"></div>
+          <div class="mt-6 pt-6 border-t border-gray-100 flex gap-3">
+            <button onclick="app.nav('records')"
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors">View
+              All Records</button>
+            <button onclick="app.resetUpload()"
+              class="flex-1 bg-keep-dark hover:bg-keep-green text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors">Upload
+              Another</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- MOBILE BOTTOM NAV (Visible on Mobile) -->
+    <nav
+      class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center justify-around pb-safe pt-2 px-2 z-30 shadow-nav h-20">
+      <button onclick="event.preventDefault(); app.nav('dashboard')" id="mob-nav-dashboard"
+        class="nav-item active flex flex-col items-center gap-1 p-2 text-gray-400 w-16">
+        <i class="fas fa-th-large text-lg"></i>
+        <span class="text-[10px] font-medium">Home</span>
+      </button>
+      <button onclick="event.preventDefault(); app.nav('records')" id="mob-nav-records"
+        class="nav-item flex flex-col items-center gap-1 p-2 text-gray-400 w-16">
+        <i class="far fa-folder-open text-lg"></i>
+        <span class="text-[10px] font-medium">Records</span>
+      </button>
+      <button onclick="event.preventDefault(); app.nav('upload')"
+        class="relative -top-5 bg-keep-dark text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform border-4 border-gray-50">
+        <i class="fas fa-plus text-xl"></i>
+      </button>
+      <button onclick="event.preventDefault(); app.nav('timeline')" id="mob-nav-timeline"
+        class="nav-item flex flex-col items-center gap-1 p-2 text-gray-400 w-16">
+        <i class="fas fa-chart-line text-lg"></i>
+        <span class="text-[10px] font-medium">Timeline</span>
+      </button>
+      <button onclick="app.nav('profile')" id="mob-nav-profile"
+        class="nav-item flex flex-col items-center gap-1 p-2 text-gray-400 w-16">
+        <i class="far fa-user text-lg"></i>
+        <span class="text-[10px] font-medium">Profile</span>
+      </button>
+    </nav>
+  </main>
+
+  <!-- AI SUMMARY MODAL -->
+  <div id="summary-modal"
+    class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto fade-in">
+      <div class="p-6 border-b border-gray-100 flex justify-between items-start">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900" id="modal-title">Record Analysis</h2>
+          <p class="text-sm text-gray-500" id="modal-subtitle">AI-Generated Insights</p>
+        </div>
+        <button onclick="document.getElementById('summary-modal').classList.add('hidden')"
+          class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-6">
+        <!-- Loading State -->
+        <div id="modal-loading" class="hidden py-12 text-center">
+          <div class="animate-spin w-10 h-10 border-4 border-keep-green border-t-transparent rounded-full mx-auto mb-4">
+          </div>
+          <p class="text-gray-500 font-medium">Analyzing medical document...</p>
+        </div>
+
+        <!-- Content -->
+        <div id="modal-content">
+          <div class="bg-keep-light/50 p-4 rounded-xl mb-6 flex items-center gap-4">
+            <div class="relative w-12 h-12 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path class="text-gray-200"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                  stroke="currentColor" stroke-width="3" />
+                <path class="text-keep-green"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                  stroke="currentColor" stroke-width="3" stroke-dasharray="98, 100" />
+              </svg>
+              <span class="absolute text-xs font-bold text-keep-dark">98%</span>
+            </div>
+            <div>
+              <h4 class="font-bold text-keep-dark text-sm">High Confidence</h4>
+              <p class="text-xs text-gray-600">AI is confident in this analysis.</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2"><i
+                  class="fas fa-magic text-keep-green"></i> Summary</h3>
+              <p class="text-gray-700 text-sm leading-relaxed" id="modal-summary-text">
+                The blood test results indicate normal cholesterol levels (185 mg/dL). However, Vitamin D levels are
+                slightly low (28 ng/mL), which is common but should be monitored. Glucose levels are within the healthy
+                range.
+              </p>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 mb-2">Key Findings</h3>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1" id="modal-findings">
+                <li>Cholesterol: Normal (185 mg/dL)</li>
+                <li>Vitamin D: Low (28 ng/mL)</li>
+                <li>Glucose: Normal (92 mg/dL)</li>
+              </ul>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+              <h3 class="font-bold text-blue-800 mb-2 text-sm">Questions for your Doctor</h3>
+              <ul class="list-disc list-inside text-sm text-blue-700 space-y-1" id="modal-questions">
+                <li>Should I start taking a Vitamin D supplement?</li>
+                <li>When should I schedule a follow-up test?</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-gray-100 text-xs text-gray-400 text-center">
+            Disclaimer: This is an AI-generated summary and not professional medical advice. Always consult your doctor.
+          </div>
+        </div>
+      </div>
+      <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+        <button class="px-4 py-2 text-gray-600 font-medium text-sm hover:bg-gray-200 rounded-lg">Download PDF</button>
+        <button class="px-4 py-2 bg-keep-dark text-white font-medium text-sm rounded-lg hover:bg-keep-green">Share
+          Record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD PROFILE MODAL -->
+  <div id="profile-modal"
+    class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
+      <div class="p-6 border-b border-gray-100">
+        <h2 class="text-xl font-bold text-gray-900">Add Family Member</h2>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Name</label>
+          <input type="text" id="profile-name" placeholder="e.g. Sarah"
+            class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Relationship</label>
+          <select id="profile-relation" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+            <option value="Spouse">Spouse</option>
+            <option value="Child">Child</option>
+            <option value="Parent">Parent</option>
+            <option value="Sibling">Sibling</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <button onclick="app.createProfile()"
+          class="w-full bg-keep-dark text-white py-3 rounded-lg font-medium hover:opacity-90">Create Profile</button>
+        <button onclick="document.getElementById('profile-modal').classList.add('hidden')"
+          class="w-full text-gray-500 py-2 text-sm hover:text-gray-700">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARE MODAL -->
+  <div id="share-modal"
+    class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
+      <div class="p-6 border-b border-gray-100">
+        <h2 class="text-xl font-bold text-gray-900">Create Secure Share Link</h2>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Recipient Name</label>
+          <input type="text" id="share-recipient" placeholder="e.g. Dr. Smith"
+            class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-2">Select Documents</label>
+          <div id="share-documents-list"
+            class="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2">
+            <!-- Dynamic documents will be loaded here -->
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Expiry Duration</label>
+          <select id="share-expiry" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+            <option value="24h">24 Hours</option>
+            <option value="7d">7 Days</option>
+            <option value="30d">30 Days</option>
+          </select>
+        </div>
+        <button onclick="app.createShareLink()"
+          class="w-full bg-keep-dark text-white py-3 rounded-lg font-medium hover:opacity-90">Generate Link</button>
+        <button onclick="document.getElementById('share-modal').classList.add('hidden')"
+          class="w-full text-gray-500 py-2 text-sm hover:text-gray-700">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT FAB BUTTON -->
+  <div class="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40">
+    <button onclick="app.openFullScreenChat()"
+      class="w-14 h-14 bg-keep-dark text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform border-2 border-white group">
+      <i class="fas fa-comment-medical text-xl group-hover:hidden"></i>
+      <i class="fas fa-sparkles text-xl hidden group-hover:block"></i>
+    </button>
+  </div>
+
+  <!-- FULL-SCREEN CHAT OVERLAY -->
+  <div id="fullscreen-chat" class="fixed inset-0 bg-gray-50 z-50 hidden flex flex-col">
+    <!-- Chat Header -->
+    <header class="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 rounded-full bg-gradient-to-br from-keep-green to-keep-dark flex items-center justify-center">
+          <i class="fas fa-robot text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900">Keep Assistant</h1>
+          <p class="text-xs text-gray-500">AI-powered health insights</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="app.clearChatHistory()"
+          class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Clear chat">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+        <button onclick="app.closeFullScreenChat()"
+          class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Close">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages Container -->
+    <div class="flex-1 overflow-y-auto" id="fullscreen-chat-scroll">
+      <div class="max-w-3xl mx-auto px-4 py-6 space-y-6" id="fullscreen-chat-messages">
+        <!-- Welcome Message -->
+        <div class="flex gap-4" id="chat-welcome">
+          <div
+            class="w-10 h-10 rounded-full bg-gradient-to-br from-keep-green to-keep-dark flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-robot text-white text-sm"></i>
+          </div>
+          <div class="flex-1 space-y-3">
+            <div class="bg-white rounded-2xl rounded-tl-none p-4 shadow-sm border border-gray-100">
+              <p class="text-gray-800 leading-relaxed">
+                <strong>Hello!</strong> I'm your KEEP Health Assistant. I can help you understand your medical records,
+                answer health questions, and provide insights based on your uploaded documents.
+              </p>
+              <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <p class="text-amber-800 text-sm flex items-start gap-2">
+                  <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                  <span><strong>Important:</strong> I provide informational insights only. Always consult with
+                    healthcare professionals for medical advice.</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="app.sendQuickMessage('What are my recent medical findings?')"
+                class="px-3 py-1.5 bg-keep-light text-keep-dark text-sm rounded-full hover:bg-keep-accent transition-colors">
+                <i class="fas fa-clipboard-list mr-1"></i> Recent findings
+              </button>
+              <button onclick="app.sendQuickMessage('Summarize my health records')"
+                class="px-3 py-1.5 bg-keep-light text-keep-dark text-sm rounded-full hover:bg-keep-accent transition-colors">
+                <i class="fas fa-file-medical mr-1"></i> Health summary
+              </button>
+              <button onclick="app.sendQuickMessage('What questions should I ask my doctor?')"
+                class="px-3 py-1.5 bg-keep-light text-keep-dark text-sm rounded-full hover:bg-keep-accent transition-colors">
+                <i class="fas fa-user-md mr-1"></i> Doctor questions
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Input Area -->
+    <div class="bg-white border-t border-gray-200 p-4 flex-shrink-0">
+      <div class="max-w-3xl mx-auto">
+        <div class="relative flex items-end gap-3">
+          <div class="flex-1 relative">
+            <textarea id="fullscreen-chat-input" placeholder="Ask about your health records..." rows="1"
+              class="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-keep-green focus:ring-2 focus:ring-keep-green/20 resize-none transition-all"
+              onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); app.sendStreamingMessage(); }"
+              oninput="this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 150) + 'px';"></textarea>
+          </div>
+          <button onclick="app.sendStreamingMessage()" id="chat-send-btn"
+            class="w-12 h-12 bg-keep-dark hover:bg-keep-green text-white rounded-xl flex items-center justify-center transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-2 text-center">Press Enter to send, Shift+Enter for new line</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Sources -->
+  <div id="sources-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <i class="fas fa-book-medical text-keep-green"></i>
+            Medical Sources
+          </h2>
+          <button onclick="document.getElementById('sources-modal').classList.add('hidden')"
+            class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 max-h-96 overflow-y-auto">
+        <p class="text-sm text-gray-600 mb-4">The AI used the following reputable medical sources to generate this
+          analysis:</p>
+        <ul id="sources-list" class="space-y-2">
+          <!-- Sources will be populated dynamically -->
+        </ul>
+      </div>
+      <div class="p-4 bg-gray-50 border-t border-gray-200">
+        <button onclick="document.getElementById('sources-modal').classList.add('hidden')"
+          class="w-full py-2 bg-keep-dark hover:bg-keep-green text-white rounded-lg font-medium transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"
+    class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl z-50 text-sm font-medium opacity-0 transition-opacity pointer-events-none">
+    Action Successful</div>
+
+  <script>
+    // --- SVG FOLDER ICON COMPONENT (3D Isometric) ---
+    const getFolderIcon = (color = '#1B4D3E') => {
+      // Calculate lighter shade for the side face
+      const lightenColor = (col, percent) => {
+        const num = parseInt(col.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.min(255, (num >> 16) + amt);
+        const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+        const B = Math.min(255, (num & 0x0000FF) + amt);
+        return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+      };
+
+      const sideColor = lightenColor(color, 15);
+      const tabColor = lightenColor(color, 8);
+
+      return `
+        <svg viewBox="0 0 56 48" class="w-full h-full drop-shadow-md" xmlns="http://www.w3.org/2000/svg">
+          <!-- Right side face (depth) -->
+          <path d="M 48 14 L 52 11 L 52 38 L 48 41 Z" fill="${sideColor}"/>
+          
+          <!-- Top face (depth) -->
+          <path d="M 8 10 L 12 7 L 52 7 L 52 11 L 48 14 L 8 14 Z" fill="${sideColor}"/>
+          
+          <!-- Back tab -->
+          <path d="M 8 6 L 8 2 L 20 2 L 22 6 Z" fill="${tabColor}" opacity="0.9"/>
+          
+          <!-- Front tab -->
+          <path d="M 8 6 L 22 6 L 24 10 L 48 10 L 48 14 L 8 14 Z" fill="${tabColor}"/>
+          
+          <!-- Main folder front face -->
+          <path d="M 8 14 L 8 41 L 48 41 L 48 14 Z" fill="${color}" rx="1"/>
+          
+          <!-- White paper inside folder -->
+          <rect x="12" y="18" width="32" height="19" rx="1.5" fill="white" opacity="0.95"/>
+          
+          <!-- k: logo on paper -->
+          <text x="16" y="31" font-family="'Playfair Display', serif" font-size="10" font-weight="700" fill="${color}">k:</text>
+          
+          <!-- Folder bottom edge highlight -->
+          <path d="M 8 41 L 12 38 L 52 38 L 48 41 Z" fill="${color}" opacity="0.6"/>
+        </svg>
+      `;
+    };
+
+    // Generate random vibrant colors for folders
+    const vibrantColors = [
+      '#E63946', // Vibrant Red
+      '#F77F00', // Vibrant Orange
+      '#FCBF49', // Golden Yellow
+      '#06A77D', // Teal Green
+      '#1B4D3E', // Deep Green
+      '#4A7C9E', // Steel Blue
+      '#457B9D', // Ocean Blue
+      '#8B5A8E', // Purple
+      '#D946A6', // Magenta
+      '#E85D75', // Pink Red
+      '#0891B2', // Cyan
+      '#10B981', // Emerald
+    ];
+
+    // Hash function to consistently map record ID to a color
+    const hashString = (str) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash);
+    };
+
+    const getRecordColor = (recordId) => {
+      const index = hashString(recordId) % vibrantColors.length;
+      return vibrantColors[index];
+    };
+
+    // --- API & SUPABASE CONFIGURATION ---
+    // User must replace these with their own project values
+    const SUPABASE_URL = 'https://obrguyijeairiokbnyzv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9icmd1eWlqZWFpcmlva2JueXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMDE0NDcsImV4cCI6MjA4Mzg3NzQ0N30.0h32ecqonTVbleN-CrXe9JR6Zc6epPnsHuVTEbcR-HE';
+
+    // Initialize Supabase with error handling
+    let supabaseClient = null;
+    try {
+      if (window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } else {
+        console.error('Supabase SDK not loaded');
+        // Fallback to prevent crash
+        supabaseClient = {
+          auth: {
+            getSession: async () => ({ data: { session: null }, error: new Error('SDK missing') }),
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+            signInWithOAuth: async () => ({ error: { message: 'Supabase SDK not loaded. Check internet connection.' } }),
+            signInWithPassword: async () => ({ error: { message: 'Supabase SDK not loaded.' } }),
+            signOut: async () => ({ error: null })
+          }
+        };
+      }
+    } catch (e) {
+      console.error('Supabase Init Error:', e);
+      // Create minimal dummy object to prevent 'supabase is undefined' references
+      supabaseClient = {
+        auth: {
+          getSession: async () => ({ data: { session: null }, error: e }),
+          onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+          signInWithOAuth: async () => ({ error: e }),
+          signInWithPassword: async () => ({ error: e })
+        }
+      };
+      if (typeof app !== 'undefined' && app.toast) app.toast('Error initializing auth');
+    }
+
+    const API_BASE_URL = 'http://127.0.0.1:8000'; // Or production URL
+    const API_V1 = `${API_BASE_URL}/api/v1`;
+
+    // --- STATE VARIABLES ---
+    let currentUser = null;
+    let currentProfile = null;
+    let profiles = [];
+    let records = [];
+    let timelineEvents = [];
+    let shares = [];
+    let currentUpload = null;
+
+    // --- API HELPER FUNCTIONS ---
+    // --- API HELPER FUNCTIONS ---
+    async function apiCall(endpoint, options = {}) {
+      try {
+        // Get current session for JWT
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const token = session?.access_token;
+
+        const headers = {
+          'Content-Type': 'application/json',
+          ...options.headers
+        };
+
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_V1}${endpoint}`, {
+          ...options,
+          headers
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'API request failed');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('API Error:', error);
+        app.toast('Error: ' + error.message);
+        throw error;
+      }
+    }
+
+    // --- AUTHENTICATION ---
+
+    // Check session on load
+    async function initAuth() {
+      try {
+        if (!supabaseClient) return;
+
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) {
+          console.warn('Auth session check failed:', error.message);
+          showLoginModal();
+          return;
+        }
+
+        if (data && data.session) {
+          handleUserSession(data.session);
+        } else {
+          showLoginModal();
+        }
+
+        // Listen for auth changes
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+          try {
+            if (event === 'SIGNED_IN') handleUserSession(session);
+            if (event === 'SIGNED_OUT') handleSignOut();
+          } catch (e) { console.error('Auth state change error', e); }
+        });
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        showLoginModal();
+      }
+    }
+
+    async function handleUserSession(session) {
+      // 1. Critical Auth Sync
+      try {
+        currentUser = await apiCall('/auth/sync', { method: 'POST' });
+        hideLoginModal();
+      } catch (error) {
+        console.error("Auth sync failed:", error);
+        app.toast('Authentication failed. Please sign in again.');
+        handleSignOut();
+        return; // Stop here if auth failed
+      }
+
+      // 2. Data Loading (Non-critical for session validity)
+      try {
+        await loadProfiles();
+
+        // Restore/Set profile
+        const savedProfileId = localStorage.getItem('keep_current_profile_id');
+        if (savedProfileId) {
+          const savedProfile = profiles.find(p => p.id === savedProfileId);
+          currentProfile = savedProfile || profiles[0];
+        } else {
+          currentProfile = profiles[0];
+        }
+
+        if (currentProfile) {
+          try {
+            await loadRecords();
+            await loadTimeline();
+            await loadShares(); // Fix: Ensure shares are loaded
+          } catch (e) { console.warn('Failed to load records/timeline', e); }
+        }
+
+        updateUI();
+      } catch (error) {
+        console.error("Data loading warning:", error);
+        app.toast('Some data failed to load. Please refresh.');
+        // Do NOT sign out here. User is authenticated, just missing data.
+      }
+    }
+
+    function handleSignOut() {
+      currentUser = null;
+      currentProfile = null;
+      profiles = [];
+      records = [];
+      showLoginModal();
+    }
+
+    function getRedirectUrl() {
+      // Robustly get the clean current URL for redirect, stripping query/hash
+      return window.location.href.split('?')[0].split('#')[0];
+    }
+
+    // Auth Loading State Helper
+    function setAuthLoading(isLoading) {
+      const btn = document.getElementById('auth-submit-btn');
+      const googleBtn = document.querySelector('button[onclick="signInWithGoogle()"]');
+      const errorDiv = document.getElementById('auth-error-msg');
+
+      if (isLoading) {
+        if (btn) {
+          btn.dataset.originalText = btn.innerText;
+          btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-white"></i> Processing...';
+          btn.disabled = true;
+          btn.classList.add('opacity-75', 'cursor-not-allowed');
+        }
+        if (googleBtn) {
+          googleBtn.disabled = true;
+          googleBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        if (errorDiv) errorDiv.classList.add('hidden');
+      } else {
+        if (btn) {
+          btn.innerText = btn.dataset.originalText || (isSignupMode ? 'Sign Up' : 'Sign In');
+          btn.disabled = false;
+          btn.classList.remove('opacity-75', 'cursor-not-allowed', 'opacity-50');
+        }
+        if (googleBtn) {
+          googleBtn.disabled = false;
+          googleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      }
+    }
+
+    function showAuthError(msg) {
+      const errorDiv = document.getElementById('auth-error-msg');
+      if (errorDiv) {
+        errorDiv.querySelector('span').innerText = msg;
+        errorDiv.classList.remove('hidden');
+      } else {
+        app.toast(msg);
+      }
+    }
+
+    async function signInWithGoogle() {
+      setAuthLoading(true);
+      try {
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: getRedirectUrl() }
+        });
+        if (error) throw error;
+      } catch (e) {
+        showAuthError(e.message);
+        setAuthLoading(false);
+      }
+    }
+
+    async function signInWithEmail(email, password) {
+      setAuthLoading(true);
+      try {
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+          throw error;
+        }
+        // Success handled by onAuthStateChange -> initAuth
+      } catch (e) {
+        showAuthError(e.message);
+        setAuthLoading(false);
+      }
+    }
+
+    async function signUpWithEmail(email, password, fullName) {
+      if (password.length < 6) {
+        showAuthError('Password must be at least 6 characters');
+        return;
+      }
+
+      setAuthLoading(true);
+      try {
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: getRedirectUrl(),
+            data: { full_name: fullName }
+          }
+        });
+        if (error) throw error;
+
+        app.toast('Account created! Please check your email to confirm.');
+        // Don't stop loading immediately so user sees success state briefly
+        setTimeout(() => setAuthLoading(false), 2000);
+      } catch (e) {
+        showAuthError(e.message);
+        setAuthLoading(false);
+      }
+    }
+
+    async function signOut() {
+      try {
+        await supabaseClient.auth.signOut();
+      } catch (error) {
+        console.error('Sign out error:', error);
+      } finally {
+        // Clear local storage and state regardless of API success
+        localStorage.removeItem('keep_current_profile_id');
+        localStorage.removeItem('keep_upload_record_id');
+        currentUser = null;
+        currentProfile = null;
+        profiles = [];
+        showLoginModal();
+        app.toast('Logged out successfully');
+      }
+    }
+
+    // Dummy Login function replacement
+    async function login() {
+      // Deprecated, use signInWithGoogle
+      signInWithGoogle();
+    }
+
+    // --- PROFILE FUNCTIONS ---
+    async function loadProfiles() {
+      if (!currentUser) return;
+
+      profiles = await apiCall(`/profiles?user_id=${currentUser.id}`);
+
+      // Render profile switcher dropdown in header
+      const profileMenuList = document.getElementById('profile-menu-list');
+      if (profileMenuList) {
+        profileMenuList.innerHTML = profiles.map(p => `
+          <button onclick="app.switchProfile('${p.id}')"
+            class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-3">
+            <div class="w-6 h-6 rounded-full bg-keep-accent flex items-center justify-center text-[10px] font-bold text-keep-dark">
+              ${p.name.substring(0, 2).toUpperCase()}
+            </div>
+            <span>${p.name} (${p.relation})</span>
+          </button>
+        `).join('');
+      }
+
+      // Render profile switcher (if it exists elsewhere)
+      const profileList = document.getElementById('profile-list');
+      if (profileList) {
+        profileList.innerHTML = profiles.map(p => `
+          <div class="p-3 hover:bg-gray-50 rounded-lg cursor-pointer flex items-center gap-3" 
+               onclick="app.switchProfile('${p.id}')">
+            <div class="w-10 h-10 rounded-full bg-keep-accent flex items-center justify-center font-bold text-keep-dark">
+              ${p.name.substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">${p.name}</p>
+              <p class="text-xs text-gray-500">${p.relation}</p>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function switchProfile(profileId) {
+      currentProfile = profiles.find(p => p.id === profileId);
+      if (currentProfile) {
+        localStorage.setItem('keep_current_profile_id', currentProfile.id);
+        await loadRecords();
+        await loadTimeline();
+        app.renderAll();
+      }
+
+      // Close profile switcher
+      document.getElementById('profile-switcher').classList.add('hidden');
+    }
+
+    // --- RECORD FUNCTIONS ---
+    async function loadRecords() {
+      if (!currentProfile) return;
+
+      const apiRecords = await apiCall(`/records?profile_id=${currentProfile.id}`);
+
+      // Transform API format to match frontend format
+      records = apiRecords.map(r => ({
+        id: r.id,
+        title: r.title,
+        date: r.record_date ? new Date(r.record_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+        type: r.record_type || 'Unknown',
+        profile: currentProfile.name,
+        status: r.status,
+        file: r.files && r.files.length > 0 ? {
+          name: r.files[0].original_filename,
+          type: r.files[0].file_type,
+          record_id: r.id
+        } : null,
+        summary: r.analysis ? {
+          text: r.analysis.summary,
+          findings: r.analysis.key_findings || [],
+          confidence: r.analysis.confidence_score || 0,
+          questions: r.analysis.doctor_questions || []
+        } : null
+      }));
+
+      app.renderAll();
+    }
+
+    async function loadTimeline() {
+      if (!currentProfile) return;
+
+      const events = await apiCall(`/timeline?profile_id=${currentProfile.id}`);
+
+      timelineEvents = events.map(group => ({
+        date: group.date,
+        events: group.events.map(e => ({
+          title: e.event_title,
+          type: e.event_type,
+          time: new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          icon: e.event_type === 'upload' ? 'fas fa-file-medical' :
+            e.event_type === 'share' ? 'fas fa-share-alt' :
+              e.event_type === 'analysis' ? 'fas fa-magic' : 'fas fa-user-edit',
+          color: e.event_type === 'upload' ? 'text-gray-500' :
+            e.event_type === 'share' ? 'text-blue-500' :
+              e.event_type === 'analysis' ? 'text-keep-green' : 'text-purple-500'
+        }))
+      }));
+
+      app.renderTimeline();
+    }
+
+    async function loadShares() {
+      if (!currentUser) return;
+
+      const apiShares = await apiCall(`/shares?user_id=${currentUser.id}`);
+
+      shares = apiShares.map(s => ({
+        id: s.id,
+        name: s.name,
+        recipient: s.recipient_name,
+        count: s.record_count,
+        status: s.status.charAt(0).toUpperCase() + s.status.slice(1),
+        expiry: new Date(s.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      }));
+
+      app.renderShares();
+    }
+
+    // --- APP LOGIC ---
+    const app = {
+      async init() {
+        document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        // User session is handled by initAuth() in DOMContentLoaded
+        // We just verify if the interface is ready
+
+        // Check for interrupted upload
+        const savedUploadId = localStorage.getItem('keep_upload_record_id');
+        if (savedUploadId) {
+          this.resumeUpload(savedUploadId);
+        } else {
+          this.nav('dashboard'); // Start directly on Dashboard
+        }
+      },
+
+      nav(view) {
+        // Hide all views
+        document.querySelectorAll('section[id^="view-"]').forEach(el => el.classList.add('hidden'));
+        // Show target
+        document.getElementById(`view-${view}`).classList.remove('hidden');
+
+        // Update Desktop Sidebar
+        document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+        const sideLink = document.getElementById(`nav-${view}`);
+        if (sideLink) sideLink.classList.add('active');
+
+        // Update Mobile Nav
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active', 'text-keep-dark'));
+        const mobLink = document.getElementById(`mob-nav-${view}`);
+        if (mobLink) {
+          mobLink.classList.add('active');
+          mobLink.classList.remove('text-gray-400');
+        }
+
+        // Scroll top
+        document.getElementById('main-scroll').scrollTop = 0;
+      },
+
+      renderAll() {
+        this.renderRecords();
+        this.renderTimeline();
+        this.renderShares();
+        this.renderFamily();
+
+        // Safe helpers
+        const getInitials = (name) => name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
+        const getFirstName = (name) => name ? name.split(' ')[0] : 'User';
+
+        // Update total records count
+        const totalCountEl = document.getElementById('total-records-count');
+        if (totalCountEl) totalCountEl.innerText = records ? records.length : 0;
+
+        // Update Profile & UI with real user data
+        if (currentUser) {
+          // 1. Profile Page Header
+          const nameEl = document.getElementById('profile-page-name');
+          const emailEl = document.getElementById('profile-page-email');
+          const avatarEl = document.getElementById('profile-page-avatar');
+          const roleEl = document.getElementById('profile-page-role');
+
+          if (nameEl) nameEl.innerText = currentUser.full_name || 'User';
+          if (emailEl) emailEl.innerText = currentUser.email;
+          if (avatarEl) avatarEl.innerText = getInitials(currentUser.full_name);
+          if (roleEl) roleEl.innerText = 'Primary Account Holder';
+
+          // 2. Sidebar
+          const sbName = document.getElementById('sidebar-name');
+          const sbAvatar = document.getElementById('sidebar-avatar');
+          if (sbName) sbName.innerText = currentUser.full_name || 'User';
+          if (sbAvatar) sbAvatar.innerText = getInitials(currentUser.full_name);
+
+          // 3. Header (Top Right)
+          const hdAvatar = document.getElementById('header-avatar');
+          if (hdAvatar) hdAvatar.innerText = getInitials(currentUser.full_name);
+
+          // 4. Dashboard Welcome
+          const welcomeMsg = document.getElementById('welcome-msg');
+          if (welcomeMsg) welcomeMsg.innerText = `Welcome, ${getFirstName(currentUser.full_name)}!`;
+
+          // 5. Profile Settings Inputs (Basic Info)
+          const basicName = document.getElementById('profile-input-name');
+          const basicPhone = document.getElementById('profile-input-phone');
+          // Start with empty then fill if data exists
+          if (basicName) basicName.value = currentUser.full_name || '';
+          if (basicPhone) basicPhone.value = (currentUser.user_metadata && currentUser.user_metadata.phone) || '';
+        }
+      },
+
+      async updateProfile() {
+        const nameInput = document.getElementById('profile-input-name');
+        const phoneInput = document.getElementById('profile-input-phone');
+
+        const name = nameInput ? nameInput.value : '';
+        const phone = phoneInput ? phoneInput.value : '';
+
+        if (!name) {
+          this.toast('Name is required');
+          return;
+        }
+
+        // Update Supabase Auth User Metadata
+        const { error } = await supabaseClient.auth.updateUser({
+          data: { full_name: name, phone: phone }
+        });
+
+        if (error) {
+          this.toast('Error updating profile: ' + error.message);
+        } else {
+          this.toast('Profile updated successfully');
+          // Update local state immediately for UI responsiveness
+          if (currentUser) {
+            currentUser.full_name = name;
+            if (!currentUser.user_metadata) currentUser.user_metadata = {};
+            currentUser.user_metadata.phone = phone;
+          }
+          this.renderAll();
+        }
+      },
+
+      async triggerPasswordReset() {
+        if (!currentUser || !currentUser.email) return;
+
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(currentUser.email, {
+          redirectTo: window.location.href,
+        });
+
+        if (error) {
+          this.toast('Error: ' + error.message);
+        } else {
+          this.toast('Password reset email sent to ' + currentUser.email);
+        }
+      },
+
+      renderRecords() {
+        const filtered = records.filter(r => r.profile === currentProfile.name);
+        const html = filtered.map(r => `
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-card flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer group" onclick="app.openRecordDetail('${r.id}')">
+                        <div class="w-12 h-10 flex-shrink-0">
+                            ${getFolderIcon(getRecordColor(r.id))}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-semibold text-gray-900 truncate">${r.title}</h4>
+                            <p class="text-xs text-gray-500 truncate">${r.date} • ${r.type}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="hidden md:inline-block px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold uppercase rounded-md tracking-wide">${r.status}</span>
+                            <button onclick="event.stopPropagation(); app.deleteRecord('${r.id}', '${r.title.replace(/'/g, "\\'")}');" class="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100" title="Delete record"><i class="fas fa-trash-alt"></i></button>
+                            <button class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-keep-dark transition-colors"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                `).join('');
+
+        document.getElementById('dashboard-list').innerHTML = html;
+        document.getElementById('records-list').innerHTML = html;
+      },
+
+      openRecordDetail(recordId) {
+        const record = records.find(r => r.id === recordId);
+        if (!record) return;
+
+        // Store current record for use by view/download functions
+        this.currentRecord = record;
+
+        this.nav('record-detail');
+
+        // Set title
+        document.getElementById('detail-record-title').innerText = record.title;
+
+        // Set file preview
+        const preview = document.getElementById('detail-document-preview');
+        const fileName = document.getElementById('detail-file-name');
+        const actions = document.getElementById('detail-document-actions');
+
+        if (record.file) {
+          const icon = record.file.type.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image';
+          const color = record.file.type.includes('pdf') ? 'text-red-400' : 'text-blue-400';
+          preview.innerHTML = `<i class="fas ${icon} ${color} text-6xl mb-4"></i>`;
+          fileName.innerText = record.file.name;
+          actions.classList.remove('hidden');
+        } else {
+          preview.innerHTML = `<i class="fas fa-file-alt text-gray-300 text-6xl mb-4"></i>`;
+          fileName.innerText = 'No document available';
+          actions.classList.add('hidden');
+        }
+
+        // Set AI summary
+        const summaryDiv = document.getElementById('detail-summary-content');
+        if (record.summary && record.summary.text) {
+          summaryDiv.innerHTML = `
+            <div class="bg-keep-light/30 p-4 rounded-xl mb-4">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="relative w-10 h-10">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <path class="text-gray-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"/>
+                    <path class="text-keep-green" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="${record.summary.confidence}, 100"/>
+                  </svg>
+                  <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-keep-dark">${record.summary.confidence}%</span>
+                </div>
+                <div>
+                  <p class="font-bold text-keep-dark text-sm">Confidence Score</p>
+                  <p class="text-xs text-gray-600">AI analysis reliability</p>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <h4 class="font-bold text-gray-900 text-sm mb-2">Summary</h4>
+                <p class="text-gray-700 text-sm leading-relaxed">${record.summary.text}</p>
+              </div>
+              ${record.summary.findings && record.summary.findings.length > 0 ? `
+              <div>
+                <h4 class="font-bold text-gray-900 text-sm mb-2">Key Findings</h4>
+                <ul class="space-y-1">
+                  ${record.summary.findings.map(f => `<li class="flex gap-2 text-sm text-gray-700"><i class="fas fa-check text-keep-green mt-1"></i> ${f}</li>`).join('')}
+                </ul>
+              </div>
+              ` : ''}
+              ${record.summary.questions && record.summary.questions.length > 0 ? `
+              <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <h4 class="font-bold text-blue-800 text-sm mb-2">Questions for Doctor</h4>
+                <ul class="list-disc list-inside text-sm text-blue-700 space-y-1">
+                  ${record.summary.questions.map(q => `<li>${q}</li>`).join('')}
+                </ul>
+              </div>
+              ` : ''}
+              <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mt-4">
+                <p class="text-sm font-bold text-yellow-900">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>This is not medical advice. Always consult a qualified healthcare professional.
+                </p>
+              </div>
+              ${record.summary && Array.isArray(record.summary.sources) && record.summary.sources.length > 0 ? `
+              <button onclick="app.showSources(${JSON.stringify(record.summary.sources).replace(/"/g, '&quot;')})" class="mt-3 text-keep-dark text-sm font-medium hover:underline flex items-center gap-2">
+                <i class="fas fa-book-medical"></i> View Sources
+              </button>
+              ` : ''}
+            </div>
+          `;
+        } else {
+          summaryDiv.innerHTML = `<p class="text-gray-500 text-sm">No analysis available yet. The document may still be processing.</p>`;
+        }
+      },
+
+      viewDocument() {
+        if (this.currentRecord && this.currentRecord.id) {
+          window.open(`${API_V1}/records/${this.currentRecord.id}/file?inline=true`, '_blank');
+        } else {
+          this.toast('Error: Document not available');
+        }
+      },
+
+      downloadDocument() {
+        if (this.currentRecord && this.currentRecord.id) {
+          const link = document.createElement('a');
+          link.href = `${API_V1}/records/${this.currentRecord.id}/file`;
+          link.download = this.currentRecord.file ? this.currentRecord.file.name : 'document';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          this.toast('Error: Document not available');
+        }
+      },
+
+      async deleteRecord(recordId, recordTitle) {
+        // Show confirmation dialog
+        const confirmed = confirm(`Are you sure you want to delete "${recordTitle}"?\n\nThis will permanently remove:\n• The document file\n• AI analysis data\n• All related information\n\nThis action cannot be undone.`);
+
+        if (!confirmed) return;
+
+        try {
+          // Call delete endpoint
+          const response = await fetch(`${API_V1}/records/${recordId}`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to delete record');
+          }
+
+          // Reload data to reflect deletion
+          await loadRecords();
+          await loadTimeline();
+          this.renderAll();
+
+          this.toast('✓ Record deleted successfully');
+
+          // If we're viewing this record's detail, go back to dashboard
+          const detailView = document.getElementById('view-record-detail');
+          if (!detailView.classList.contains('hidden')) {
+            this.nav('dashboard');
+          }
+        } catch (error) {
+          console.error('Delete error:', error);
+          this.toast('Error deleting record. Please try again.');
+        }
+      },
+
+      renderTimeline() {
+        // Simple mock filter for timeline (in real app would filter by profile)
+        const html = timelineEvents.map(group => `
+                    <div class="mb-8 last:mb-0">
+                        <div class="absolute -left-[9px] w-4 h-4 rounded-full bg-gray-200 border-4 border-gray-50"></div>
+                        <h3 class="text-sm font-bold text-gray-500 mb-4 pl-4 uppercase tracking-wider">${group.date}</h3>
+                        <div class="space-y-4 pl-4">
+                            ${group.events.map(e => `
+                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-card flex gap-4 items-start">
+                                    <div class="mt-1 ${e.color}"><i class="${e.icon}"></i></div>
+                                    <div>
+                                        <p class="text-sm font-bold text-gray-900">${e.title}</p>
+                                        <p class="text-xs text-gray-500">${e.time}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+        document.getElementById('timeline-container').innerHTML = html;
+      },
+
+      renderShares() {
+        if (shares.length === 0) {
+          document.getElementById('sharing-table-body').innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 text-sm">No shares created yet</td></tr>';
+          document.getElementById('sharing-mobile-list').innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No shares created yet</p>';
+          return;
+        }
+
+        // Desktop Table
+        document.getElementById('sharing-table-body').innerHTML = shares.map(s => `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-gray-900">${s.name}</td>
+                        <td class="px-6 py-4 text-gray-500">${s.recipient}</td>
+                        <td class="px-6 py-4 text-gray-500">${s.count} documents</td>
+                        <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium ${s.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${s.status}</span></td>
+                        <td class="px-6 py-4 text-gray-500 text-xs">${s.expiry}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button class="text-keep-dark font-medium text-xs hover:underline mr-3" onclick="app.copyShareLink('${s.id}')">Copy</button>
+                            <button class="text-red-500 font-medium text-xs hover:underline" onclick="app.revokeShare('${s.id}')">Revoke</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+        // Mobile List
+        document.getElementById('sharing-mobile-list').innerHTML = shares.map(s => `
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-gray-900">${s.name}</h4>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${s.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${s.status}</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-1">To: ${s.recipient}</p>
+                        <p class="text-xs text-gray-400 mb-3">${s.count} documents • ${s.expiry}</p>
+                        <div class="flex gap-2">
+                            <button class="flex-1 py-2 bg-gray-50 rounded-lg text-xs font-medium text-gray-700" onclick="app.copyShareLink('${s.id}')">Copy Link</button>
+                            <button class="flex-1 py-2 bg-red-50 rounded-lg text-xs font-medium text-red-600" onclick="app.revokeShare('${s.id}')">Revoke</button>
+                        </div>
+                    </div>
+                `).join('');
+      },
+
+      renderFamily() {
+        document.getElementById('family-grid').innerHTML = profiles.map(p => `
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-card flex items-center gap-4 cursor-pointer hover:border-keep-accent transition-colors" onclick="app.switchProfile('${p.id}')">
+                        <div class="w-12 h-12 rounded-full bg-keep-accent flex items-center justify-center text-sm font-bold text-keep-dark">${p.name.substring(0, 2).toUpperCase()}</div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-900 text-sm">${p.name}</h4>
+                            <p class="text-xs text-gray-500">${records.filter(r => r.profile === p.name).length} Records</p>
+                        </div>
+                        <button class="text-xs font-medium text-keep-dark border border-keep-dark px-3 py-1.5 rounded-lg hover:bg-keep-dark hover:text-white transition-colors">View</button>
+                    </div>
+                `).join('') + `
+                    <button onclick="app.openCreateProfileModal()" class="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 cursor-pointer hover:border-keep-green hover:bg-keep-light/20 transition-colors h-[88px]">
+                        <i class="fas fa-plus text-keep-green"></i>
+                        <span class="text-sm font-bold text-gray-600">Add Dependent</span>
+                    </button>
+                `;
+      },
+
+      async switchProfile(profileId) {
+        const profile = profiles.find(p => p.id === profileId);
+        if (!profile) return;
+
+        currentProfile = profile;
+
+        // Update UI Elements
+        const updateAvatar = (id, sizeClass) => {
+          const el = document.getElementById(id);
+          if (el) {
+            const initials = profile.name.substring(0, 2).toUpperCase();
+            el.innerText = initials;
+            el.className = `${sizeClass} rounded-full flex items-center justify-center text-keep-dark font-bold bg-keep-accent`;
+          }
+        };
+
+        updateAvatar('sidebar-avatar', 'w-8 h-8 text-xs');
+        updateAvatar('header-avatar', 'w-8 h-8 text-xs');
+        updateAvatar('profile-page-avatar', 'w-16 h-16 md:w-20 md:h-20 text-xl md:text-2xl');
+
+        document.getElementById('sidebar-name').innerText = profile.name;
+        document.getElementById('profile-page-name').innerText = profile.name;
+        document.getElementById('profile-page-email').innerText = currentUser.email;
+        document.getElementById('profile-page-role').innerText = profile.relation;
+        document.getElementById('welcome-msg').innerText = `Welcome, ${profile.name.split(' ')[0]}!`;
+        document.getElementById('chat-user-name').innerText = profile.name.split(' ')[0];
+
+        document.getElementById('profile-menu').classList.add('hidden');
+
+        // Reload data for new profile
+        await loadRecords();
+        await loadTimeline();
+        this.renderAll();
+        this.toast(`Switched to ${profile.name}`);
+      },
+
+      toggleProfileMenu() { document.getElementById('profile-menu').classList.toggle('hidden'); },
+
+      openSummary(title) {
+        const modal = document.getElementById('summary-modal');
+        modal.classList.remove('hidden');
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-content').classList.remove('hidden');
+        document.getElementById('modal-loading').classList.add('hidden');
+      },
+
+      handleUpload(input) {
+        if (input.files && input.files[0]) {
+          const file = input.files[0];
+          currentUpload = {
+            file: file,
+            fileName: file.name,
+            fileType: file.type
+          };
+
+          // Hide drop zone, show review form
+          document.getElementById('upload-drop-zone').classList.add('hidden');
+          document.getElementById('upload-review-form').classList.remove('hidden');
+
+          // Populate form
+          document.getElementById('upload-doc-name').value = file.name.replace(/\.[^/.]+$/, '');
+          document.getElementById('upload-date').value = new Date().toISOString().split('T')[0];
+
+          // Show preview
+          const preview = document.getElementById('upload-preview');
+          const fileNameEl = document.getElementById('upload-file-name');
+          fileNameEl.innerText = file.name;
+
+          if (file.type.includes('pdf')) {
+            preview.innerHTML = `<i class="fas fa-file-pdf text-red-400 text-5xl mb-3"></i><p class="text-gray-500 text-sm" id="upload-file-name">${file.name}</p>`;
+          } else if (file.type.includes('image')) {
+            preview.innerHTML = `<i class="fas fa-file-image text-blue-400 text-5xl mb-3"></i><p class="text-gray-500 text-sm" id="upload-file-name">${file.name}</p>`;
+          } else {
+            preview.innerHTML = `<i class="fas fa-file-alt text-gray-400 text-5xl mb-3"></i><p class="text-gray-500 text-sm" id="upload-file-name">${file.name}</p>`;
+          }
+        }
+      },
+
+      cancelUpload() {
+        currentUpload = null;
+        document.getElementById('upload-drop-zone').classList.remove('hidden');
+        document.getElementById('upload-review-form').classList.add('hidden');
+        document.getElementById('upload-summary-display').classList.add('hidden');
+        document.getElementById('file-input').value = '';
+      },
+
+      async saveUpload() {
+        console.log('[UPLOAD] Starting upload...', { currentUpload, currentProfile });
+
+        if (!currentUpload || !currentProfile) {
+          console.error('[UPLOAD] Missing data:', { currentUpload, currentProfile });
+          this.toast('Error: Missing upload data or profile');
+          return;
+        }
+
+        const docName = document.getElementById('upload-doc-name').value;
+        const date = document.getElementById('upload-date').value;
+
+        // Hide form and show processing
+        document.getElementById('upload-review-form').classList.add('hidden');
+        document.getElementById('upload-processing').classList.remove('hidden');
+
+        // Update status messages
+        const statusEl = document.getElementById('processing-status');
+        const titleEl = document.getElementById('processing-title');
+
+        const updateStatus = (title, msg) => {
+          titleEl.innerText = title;
+          statusEl.innerText = msg;
+        };
+
+        try {
+          updateStatus('Uploading...', 'Securely encrypting and uploading your document.');
+
+          // Create FormData for file upload
+          const formData = new FormData();
+          formData.append('file', currentUpload.file);
+          formData.append('profile_id', currentProfile.id);
+          formData.append('document_name', docName);
+          formData.append('record_date', date);
+
+          // Get auth token
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          const token = session?.access_token;
+
+          if (!token) {
+            throw new Error('Not authenticated');
+          }
+
+          // Upload to backend
+          const response = await fetch(`${API_V1}/records/upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error('Upload failed: ' + response.status);
+          }
+
+          const result = await response.json();
+          const recordId = result.record_id;
+
+          // Professional multi-step loading sequence
+          updateStatus('Step 1 of 5', 'Extracting your document...');
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          updateStatus('Step 2 of 5', 'Analyzing key medical information...');
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          updateStatus('Step 3 of 5', 'Retrieving reference data...');
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          updateStatus('Step 4 of 5', 'Compiling your results...');
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          updateStatus('Step 5 of 5', 'Preparing your summary...');
+
+          // Save record ID to handle reloads
+          localStorage.setItem('keep_upload_record_id', recordId);
+
+          // Poll for analysis completion
+          const checkAnalysis = async () => {
+            try {
+              const record = await apiCall(`/records/${recordId}`);
+
+              if (record.status === 'Analyzed' && record.analysis) {
+                // Analysis complete
+                clearInterval(pollInterval);
+                localStorage.removeItem('keep_upload_record_id');
+
+                // Reload data
+                await loadRecords();
+                await loadTimeline();
+                this.renderAll();
+
+                // Hide processing, show summary
+                document.getElementById('upload-processing').classList.add('hidden');
+                document.getElementById('upload-summary-display').classList.remove('hidden');
+
+                const summaryContent = document.getElementById('upload-summary-content');
+                const analysis = record.analysis;
+
+                // Get elements for dynamic content
+                const summaryText = summaryContent.querySelector('#summary-text');
+                const keyFindings = summaryContent.querySelector('#key-findings-list');
+                const confidenceScore = summaryContent.querySelector('#confidence-score');
+                const doctorQuestions = summaryContent.querySelector('#doctor-questions-list');
+
+                summaryContent.innerHTML = `
+                  <div class="bg-keep-light/30 p-4 rounded-xl mb-4">
+                    <div class="flex items-center gap-3">
+                      <div class="relative w-12 h-12">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                          <path class="text-gray-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"/>
+                          <path class="text-keep-green" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="${analysis.confidence_score || 0}, 100"/>
+                        </svg>
+                        <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-keep-dark">${Math.round(analysis.confidence_score || 0)}%</span>
+                      </div>
+                      <div>
+                        <p class="font-bold text-keep-dark text-sm">AI Confidence Score</p>
+                        <p class="text-xs text-gray-600">Analysis complete</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="space-y-4">
+                    <div>
+                      <h4 class="font-bold text-gray-900 mb-2">Summary</h4>
+                      <p class="text-gray-700 text-sm leading-relaxed" id="summary-text">${analysis.summary || 'Analysis complete.'}</p>
+                    </div>
+                    ${analysis.key_findings && analysis.key_findings.length > 0 ? `
+                    <div>
+                      <h4 class="font-bold text-gray-900 mb-2">Key Findings</h4>
+                      <ul class="space-y-2" id="key-findings-list">
+                        ${analysis.key_findings.map(f => `<li class="flex gap-2 text-sm text-gray-700"><i class="fas fa-check text-keep-green mt-1"></i> ${f}</li>`).join('')}
+                      </ul>
+                    </div>
+                    ` : ''}
+                    ${analysis.doctor_questions && analysis.doctor_questions.length > 0 ? `
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                      <h4 class="font-bold text-blue-800 mb-2 text-sm">Questions for Doctor</h4>
+                      <ul class="list-disc list-inside text-sm text-blue-700 space-y-1" id="doctor-questions-list">
+                        ${analysis.doctor_questions.map(q => `<li>${q}</li>`).join('')}
+                      </ul>
+                    </div>
+                    ` : ''}
+                      <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mt-4">
+                        <p class="text-sm font-bold text-yellow-900">
+                          <i class="fas fa-exclamation-triangle mr-2"></i>This is not medical advice. Always consult a qualified healthcare professional.
+                        </p>
+                      </div>
+                      ${analysis.medical_sources_used && analysis.medical_sources_used.length > 0 ? `
+                      <button onclick="app.showSources(${JSON.stringify(analysis.medical_sources_used).replace(/"/g, '&quot;')})" class="mt-3 text-keep-dark text-sm font-medium hover:underline flex items-center gap-2">
+                        <i class="fas fa-book-medical"></i> View Sources
+                      </button>
+                      ` : ''}
+                  </div>
+                `;
+
+                this.toast('✓ Record Analyzed Successfully');
+
+              } else if (record.status === 'Error') {
+                clearInterval(pollInterval);
+                document.getElementById('upload-processing').classList.add('hidden');
+                document.getElementById('upload-review-form').classList.remove('hidden');
+                this.toast('Error analyzing document. Please try again.');
+              }
+            } catch (error) {
+              console.error('Polling error:', error);
+            }
+          };
+
+          // Start polling every 2 seconds
+          const pollInterval = setInterval(checkAnalysis, 2000);
+
+        } catch (error) {
+          console.error('Upload error:', error);
+          this.toast('Error uploading file');
+          document.getElementById('upload-processing').classList.add('hidden');
+          document.getElementById('upload-review-form').classList.remove('hidden');
+        }
+      },
+
+      resetUpload() {
+        currentUpload = null;
+        document.getElementById('upload-drop-zone').classList.remove('hidden');
+        document.getElementById('upload-review-form').classList.add('hidden');
+        document.getElementById('upload-summary-display').classList.add('hidden');
+        document.getElementById('file-input').value = '';
+      },
+
+
+
+      openShareModal() {
+        document.getElementById('share-modal').classList.remove('hidden');
+        // Populate documents list
+        const docsList = document.getElementById('share-documents-list');
+        if (records.length === 0) {
+          docsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No records available to share</p>';
+        } else {
+          docsList.innerHTML = records.map(r => {
+            const fileIcon = r.file && r.file.type.includes('pdf') ? 'fa-file-pdf text-red-400' : 'fa-file-image text-blue-400';
+            const dateStr = r.date || 'No date';
+            return `
+              <label class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-keep-accent transition-all" >
+                <input type="checkbox" class="share-doc-checkbox w-4 h-4 rounded text-keep-green focus:ring-keep-green focus:ring-2" data-record-id="${r.id}">
+                <i class="fas ${fileIcon} text-lg"></i>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">${r.title}</p>
+                  <p class="text-xs text-gray-500">${dateStr} • ${r.type}</p>
+                </div>
+              </label>
+            `;
+          }).join('');
+        }
+      },
+
+      async createShareLink() {
+        const recipient = document.getElementById('share-recipient').value;
+        if (!recipient) return alert('Please enter a recipient name');
+
+        // Get selected documents
+        const checkboxes = document.querySelectorAll('.share-doc-checkbox:checked');
+        const recordIds = Array.from(checkboxes).map(cb => cb.dataset.recordId);
+
+        if (recordIds.length === 0) {
+          return alert('Please select at least one document to share');
+        }
+
+        try {
+          const expiryHours = {
+            '24h': 24,
+            '7d': 168,
+            '30d': 720
+          }[document.getElementById('share-expiry').value] || 24;
+
+          const shareData = await apiCall(`/shares?user_id=${currentUser.id}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              name: `Share with ${recipient}`,
+              recipient_name: recipient,
+              record_ids: recordIds,
+              expiry_hours: expiryHours
+            })
+          });
+
+          document.getElementById('share-modal').classList.add('hidden');
+          document.getElementById('share-recipient').value = '';
+
+          await loadShares(); // Use global function
+          this.toast('Secure Link Created');
+
+          // Show Success Modal with Link
+          const shareUrl = `${window.location.origin}/s/${shareData.id}`;
+
+          // Create a temporary modal for this success state if one doesn't exist
+          // Or just use alert/prompt for now to ensure visibility as requested
+          // Better: Use a custom success modal
+
+          const successHtml = `
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+               <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-scale-in">
+                  <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <i class="fas fa-check text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">Share Link Ready</h3>
+                    <p class="text-sm text-gray-500 mt-2">Send this secure link to ${recipient}</p>
+                  </div>
+                  
+                  <div class="bg-gray-50 p-3 rounded-lg flex items-center gap-2 mb-6 border border-gray-200">
+                    <input type="text" value="${shareUrl}" readonly class="bg-transparent flex-1 text-sm text-gray-700 outline-none select-all" id="generated-share-link">
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('generated-share-link').value).then(() => app.toast('Copied!'))" class="text-keep-dark hover:text-keep-green">
+                      <i class="fas fa-copy"></i>
+                    </button>
+                  </div>
+
+                  <button onclick="this.closest('.fixed').remove()" class="w-full bg-keep-dark text-white py-3 rounded-xl font-semibold">Done</button>
+               </div>
+            </div>
+          `;
+          document.body.insertAdjacentHTML('beforeend', successHtml);
+
+        } catch (error) {
+          console.error('Share creation failed:', error);
+          this.toast('Share creation failed: ' + error.message);
+        }
+      },
+
+      copyShareLink(shareId) {
+        const share = shares.find(s => s.id === shareId);
+        if (!share) return;
+        const shareUrl = `${window.location.origin}/s/${shareId}`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          this.toast('Link copied to clipboard!');
+        }).catch(() => {
+          alert(`Share link: ${shareUrl}`);
+        });
+      },
+
+      async revokeShare(shareId) {
+        if (!confirm('Are you sure you want to revoke this share link?')) return;
+
+        try {
+          await apiCall(`/shares/${shareId}/revoke`, {
+            method: 'PUT'
+          });
+
+          await loadShares();
+          this.toast('Share link revoked');
+        } catch (error) {
+          console.error('Failed to revoke share:', error);
+        }
+      },
+
+      openCreateProfileModal() {
+        document.getElementById('profile-modal').classList.remove('hidden');
+      },
+
+      async createProfile() {
+        const name = document.getElementById('profile-name').value;
+        const relation = document.getElementById('profile-relation').value;
+
+        if (!name) return alert('Please enter a name');
+
+        try {
+          await apiCall(`/profiles?user_id=${currentUser.id}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              name: name,
+              relation: relation,
+              avatar_seed: name
+            })
+          });
+
+          document.getElementById('profile-modal').classList.add('hidden');
+          document.getElementById('profile-name').value = '';
+
+          await loadProfiles();
+          this.renderFamily();
+          this.toast('Profile created successfully');
+        } catch (error) {
+          console.error('Failed to create profile:', error);
+          this.toast('Error creating profile');
+        }
+      },
+
+      // ============================================
+      // FULL-SCREEN STREAMING CHAT
+      // ============================================
+
+      openFullScreenChat() {
+        document.getElementById('fullscreen-chat').classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+        document.getElementById('fullscreen-chat-input').focus();
+      },
+
+      closeFullScreenChat() {
+        document.getElementById('fullscreen-chat').classList.add('hidden');
+        document.body.style.overflow = ''; // Restore scroll
+      },
+
+      sendQuickMessage(message) {
+        document.getElementById('fullscreen-chat-input').value = message;
+        this.sendStreamingMessage();
+      },
+
+      async clearChatHistory() {
+        if (!confirm('Clear all chat history?')) return;
+
+        try {
+          await apiCall(`/chat/history?user_id=${currentUser.id}&profile_id=${currentProfile.id}`, {
+            method: 'DELETE'
+          });
+
+          // Reset chat UI to welcome message only
+          const container = document.getElementById('fullscreen-chat-messages');
+          const welcomeMsg = document.getElementById('chat-welcome');
+          if (welcomeMsg) {
+            container.innerHTML = '';
+            container.appendChild(welcomeMsg.cloneNode(true));
+          }
+          this.toast('Chat history cleared');
+        } catch (error) {
+          console.error('Failed to clear chat:', error);
+        }
+      },
+
+      // Format AI response with proper HTML structure
+      formatAIResponse(text) {
+        // Convert markdown-like patterns to HTML
+        let formatted = text
+          // Bold: **text** or __text__
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/__(.*?)__/g, '<strong>$1</strong>')
+          // Italic: *text* or _text_
+          .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+          .replace(/_([^_]+)_/g, '<em>$1</em>')
+          // Headers
+          .replace(/^### (.*$)/gm, '<h4 class="font-bold text-gray-800 mt-4 mb-2">$1</h4>')
+          .replace(/^## (.*$)/gm, '<h3 class="font-bold text-gray-900 text-lg mt-4 mb-2">$1</h3>')
+          .replace(/^# (.*$)/gm, '<h2 class="font-bold text-gray-900 text-xl mt-4 mb-2">$1</h2>')
+          // Bullet points
+          .replace(/^[•\-\*] (.*$)/gm, '<li class="ml-4 list-disc">$1</li>')
+          // Numbered lists
+          .replace(/^\d+\. (.*$)/gm, '<li class="ml-4 list-decimal">$1</li>')
+          // Paragraphs (double newlines)
+          .replace(/\n\n/g, '</p><p class="mb-3">')
+          // Single newlines within paragraphs
+          .replace(/\n/g, '<br>');
+
+        // Wrap list items in ul/ol
+        formatted = formatted.replace(/(<li class="ml-4 list-disc">.*?<\/li>)+/gs, '<ul class="mb-3 space-y-1">$&</ul>');
+        formatted = formatted.replace(/(<li class="ml-4 list-decimal">.*?<\/li>)+/gs, '<ol class="mb-3 space-y-1">$&</ol>');
+
+        return `<p class="mb-3">${formatted}</p>`;
+      },
+
+      async sendStreamingMessage() {
+        const input = document.getElementById('fullscreen-chat-input');
+        const sendBtn = document.getElementById('chat-send-btn');
+        const message = input.value.trim();
+
+        if (!message || !currentProfile || !currentUser) return;
+
+        const container = document.getElementById('fullscreen-chat-messages');
+        const scrollContainer = document.getElementById('fullscreen-chat-scroll');
+
+        // Disable input while processing
+        input.disabled = true;
+        sendBtn.disabled = true;
+
+        // Add user message
+        const userMsgId = 'user-msg-' + Date.now();
+        container.innerHTML += `
+          <div id="${userMsgId}" class="flex gap-4 justify-end fade-in">
+            <div class="max-w-xl">
+              <div class="bg-keep-dark text-white p-4 rounded-2xl rounded-tr-none shadow-sm">
+                <p class="text-sm leading-relaxed">${this.escapeHtml(message)}</p>
+              </div>
+            </div>
+          </div>`;
+
+        input.value = '';
+        input.style.height = 'auto';
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+        // Create AI response container with typing indicator
+        const responseId = 'ai-response-' + Date.now();
+        container.innerHTML += `
+          <div id="${responseId}" class="flex gap-4 fade-in">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-keep-green to-keep-dark flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-robot text-white text-sm"></i>
+            </div>
+            <div class="flex-1 max-w-2xl">
+              <div class="bg-white rounded-2xl rounded-tl-none p-4 shadow-sm border border-gray-100">
+                <div id="${responseId}-content" class="text-gray-800 leading-relaxed">
+                  <span class="inline-flex items-center gap-2 text-gray-400">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <span>Thinking...</span>
+                  </span>
+                </div>
+              </div>
+              <div id="${responseId}-sources" class="hidden mt-2"></div>
+            </div>
+          </div>`;
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+        try {
+          // Create EventSource-like connection using fetch for POST
+          const response = await fetch(`${API_V1}/chat/stream`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'user-id': currentUser.id
+            },
+            body: JSON.stringify({
+              profile_id: currentProfile.id,
+              message: message
+            })
+          });
+
+          if (!response.ok) throw new Error('Stream failed');
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          const contentEl = document.getElementById(`${responseId}-content`);
+          const sourcesEl = document.getElementById(`${responseId}-sources`);
+
+          let fullContent = '';
+          let sources = [];
+
+          // Clear typing indicator
+          contentEl.innerHTML = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  if (data.type === 'content') {
+                    fullContent += data.data;
+                    contentEl.innerHTML = this.formatAIResponse(fullContent);
+                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                  } else if (data.type === 'sources') {
+                    sources = data.data;
+                  } else if (data.type === 'done') {
+                    // Show sources if available
+                    if (sources.length > 0) {
+                      sourcesEl.classList.remove('hidden');
+                      sourcesEl.innerHTML = `
+                        <div class="flex flex-wrap gap-2">
+                          ${sources.map(s => `
+                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                              <i class="fas ${s.type === 'user_document' ? 'fa-file-medical' : 'fa-book-medical'} text-keep-green"></i>
+                              ${s.title}
+                            </span>
+                          `).join('')}
+                        </div>`;
+                    }
+                  } else if (data.type === 'error') {
+                    throw new Error(data.data);
+                  }
+                } catch (e) {
+                  // Skip malformed JSON
+                }
+              }
+            }
+          }
+
+        } catch (error) {
+          console.error('Chat error:', error);
+          const contentEl = document.getElementById(`${responseId}-content`);
+          contentEl.innerHTML = `
+            <div class="flex items-start gap-2 text-red-600">
+              <i class="fas fa-exclamation-triangle mt-0.5"></i>
+              <span>Sorry, I encountered an error. Please try again.</span>
+            </div>`;
+        } finally {
+          // Re-enable input
+          input.disabled = false;
+          sendBtn.disabled = false;
+          input.focus();
+        }
+      },
+
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      },
+
+      // Legacy chat toggle (kept for compatibility)
+      toggleChat() { this.openFullScreenChat(); },
+
+      // Legacy sendMessage points to streaming version
+      async sendMessage() { return this.sendStreamingMessage(); },
+
+      toast(msg) {
+        const el = document.getElementById('toast');
+        el.innerText = msg;
+        el.classList.remove('opacity-0');
+        el.style.top = '20px';
+        setTimeout(() => {
+          el.classList.add('opacity-0');
+          el.style.top = '4px';
+        }, 3000);
+      },
+
+      showSources(sources) {
+        // Populate sources list
+        const sourcesList = document.getElementById('sources-list');
+        if (!sources || sources.length === 0) {
+          sourcesList.innerHTML = '<li class="text-gray-500 text-sm">No sources available</li>';
+        } else {
+          sourcesList.innerHTML = sources.map(source => `
+            <li class="flex items-start gap-2">
+              <i class="fas fa-check-circle text-keep-green mt-0.5"></i>
+              <span class="text-sm text-gray-700">${source}</span>
+            </li>
+          `).join('');
+        }
+
+        // Show modal
+        document.getElementById('sources-modal').classList.remove('hidden');
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (app.init) app.init();
+      initAuth();
+    });
+  </script>
+
+  <!-- Login/Signup Modal -->
+  <div id="login-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 transition-all" id="auth-container">
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 bg-keep-light rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-heartbeat text-3xl text-keep-green"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900" id="auth-title">Welcome Back</h2>
+        <p class="text-gray-500 mt-2" id="auth-subtitle">Your Personal Health Vault</p>
+      </div>
+
+      <!-- Social Auth -->
+      <button onclick="signInWithGoogle()"
+        class="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 mb-6 shadow-sm">
+        <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
+        Continue with Google
+      </button>
+
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-200"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+          <span class="px-2 bg-white text-gray-500">Or continue with email</span>
+        </div>
+      </div>
+
+      <div id="auth-error-msg"
+        class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm text-center border border-red-100 flex items-center justify-center gap-2">
+        <i class="fas fa-exclamation-circle"></i>
+        <span></span>
+      </div>
+
+      <form onsubmit="event.preventDefault(); handleAuthSubmit(this);" class="space-y-4">
+        <!-- Name Field (Hidden by default) -->
+        <div id="auth-name-field" class="hidden">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+          <input type="text" name="fullname" placeholder="John Doe"
+            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-transparent outline-none transition-all">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" name="email" required placeholder="you@example.com"
+            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-transparent outline-none transition-all">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input type="password" name="password" required placeholder="••••••••"
+            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-transparent outline-none transition-all">
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" id="auth-submit-btn"
+            class="w-full bg-keep-green text-white font-semibold py-3 px-4 rounded-xl hover:bg-keep-dark transition-colors shadow-lg shadow-keep-green/30">
+            Sign In
+          </button>
+        </div>
+      </form>
+
+      <div class="mt-6 text-center">
+        <button onclick="toggleAuthMode()"
+          class="text-keep-dark hover:text-keep-green font-medium text-sm transition-colors">
+          <span id="auth-toggle-text">Don't have an account? Sign up</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Auth State
+    let isSignupMode = false;
+
+    function toggleAuthMode() {
+      isSignupMode = !isSignupMode;
+      const title = document.getElementById('auth-title');
+      const nameField = document.getElementById('auth-name-field');
+      const submitBtn = document.getElementById('auth-submit-btn');
+      const toggleText = document.getElementById('auth-toggle-text');
+
+      if (isSignupMode) {
+        title.innerText = 'Create Account';
+        nameField.classList.remove('hidden');
+        document.querySelector('input[name="fullname"]').required = true;
+        submitBtn.innerText = 'Sign Up';
+        toggleText.innerText = 'Already have an account? Sign in';
+      } else {
+        title.innerText = 'Welcome Back';
+        nameField.classList.add('hidden');
+        document.querySelector('input[name="fullname"]').required = false;
+        submitBtn.innerText = 'Sign In';
+        toggleText.innerText = "Don't have an account? Sign up";
+      }
+    }
+
+    async function handleAuthSubmit(form) {
+      const email = form.email.value;
+      const password = form.password.value;
+      const name = form.fullname.value;
+
+      if (isSignupMode) {
+        await signUpWithEmail(email, password, name);
+      } else {
+        await signInWithEmail(email, password);
+      }
+    }
+
+    // Modal helpers
+    function showLoginModal() {
+      const modal = document.getElementById('login-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function hideLoginModal() {
+      const modal = document.getElementById('login-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+  </script>
+</body>
+
+</html>
