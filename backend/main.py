@@ -37,7 +37,11 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=[
+        "http://localhost:5173",          # Local development
+        "https://keep-ten-pi.vercel.app/", # <-- REPLACE THIS with your actual Vercel URL
+        "*"                               # Keep "*" only if you want to allow ANY website to connect (less secure)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,17 +55,13 @@ def get_db():
     finally:
         db_session.close()
 
-# Mount frontend directory for potential assets (though index.html is single file)
-# Use absolute path binding to be safe
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
-
-# Mount static files if needed (e.g. for images/css if separated later)
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
-
 @app.get("/")
 async def root():
-    return FileResponse(os.path.join(FRONTEND_DIR, 'index.html'))
+    return {
+        "status": "online",
+        "message": "KEEP API is running. Please access via the Vercel frontend.",
+        "docs": "/docs"
+    }
 
 # ============================================================================
 # AUTH ROUTES (Simplified - extend with proper JWT in production)
