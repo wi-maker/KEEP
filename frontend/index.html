@@ -204,7 +204,7 @@
     </header>
 
     <!-- SCROLLABLE CONTENT -->
-    <div class="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-8 scrollbar-hide" id="main-scroll">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 pb-40 md:pb-8 scrollbar-hide" id="main-scroll">
 
       <!-- VIEW: DASHBOARD -->
       <section id="view-dashboard" class="fade-in max-w-5xl mx-auto pt-4 md:pt-6">
@@ -1185,15 +1185,17 @@
         });
         if (error) throw error;
 
-        app.toast('Account created! Please check your email to confirm.');
-        // Don't stop loading immediately so user sees success state briefly
-        setTimeout(() => setAuthLoading(false), 2000);
+        // ✅ SUCCESS: Hide form, Show Success Message
+        setAuthLoading(false);
+        document.getElementById('auth-form-container').classList.add('hidden');
+        document.getElementById('auth-success-msg').classList.remove('hidden');
+        
       } catch (e) {
         showAuthError(e.message);
         setAuthLoading(false);
       }
     }
-
+    
     async function signOut() {
       try {
         await supabaseClient.auth.signOut();
@@ -2468,6 +2470,21 @@
         <button onclick="toggleAuthMode()"
           class="text-keep-dark hover:text-keep-green font-medium text-sm transition-colors">
           <span id="auth-toggle-text">Don't have an account? Sign up</span>
+        </button>
+      </div>
+
+      <div id="auth-success-msg" class="hidden text-center py-4">
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+          <i class="fas fa-envelope-open-text text-4xl text-green-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Check your inbox</h2>
+        <p class="text-gray-500 mb-8 leading-relaxed">
+          We've sent a confirmation link to your email address.<br>
+          Please click the link to activate your account.
+        </p>
+        <button onclick="location.reload()" 
+          class="w-full bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
+          Back to Login
         </button>
       </div>
     </div>
