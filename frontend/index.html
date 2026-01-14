@@ -2268,11 +2268,15 @@
 
         try {
           // Create EventSource-like connection using fetch for POST
+
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          const token = session?.access_token;
+          
           const response = await fetch(`${API_V1}/chat/stream`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'user-id': currentUser.id
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
               profile_id: currentProfile.id,
