@@ -16,13 +16,13 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 
-from backend import models
-from backend import schemas
-from backend import db
-from backend.rag_pipeline import process_record, chat_with_rag
-from backend.config import settings
-from backend.utils import get_file_extension, sanitize_filename, get_file_size
-from backend.auth import verify_token, TokenPayload, get_current_user_id
+import models
+import schemas
+import db
+from rag_pipeline import process_record, chat_with_rag
+from config import settings
+from utils import get_file_extension, sanitize_filename, get_file_size
+from auth import verify_token, TokenPayload, get_current_user_id
 
 # Create tables
 models.Base.metadata.create_all(bind=db.engine)

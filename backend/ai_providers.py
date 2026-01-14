@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from openai import OpenAI
 import google.generativeai as genai
 
-from backend.config import settings
+from config import settings
 
 
 # Configure logging

@@ -17,11 +17,11 @@ from chromadb.config import Settings as ChromaSettings
 import google.generativeai as genai
 from sqlalchemy.orm import Session
 
-from backend import models
-from backend.db import SessionLocal
-from backend.config import settings
-from backend.utils import extract_text_from_pdf, extract_text_from_image, chunk_text
-from backend.ai_providers import get_ai_provider, AIProviderError
+import models
+from db import SessionLocal
+from config import settings
+from utils import extract_text_from_pdf, extract_text_from_image, chunk_text
+from ai_providers import get_ai_provider, AIProviderError
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
