@@ -23,6 +23,7 @@ from rag_pipeline import process_record, chat_with_rag
 from config import settings
 from utils import get_file_extension, sanitize_filename, get_file_size
 from auth import verify_token, TokenPayload, get_current_user_id
+from storage import upload_file_to_supabase
 
 # Create tables
 models.Base.metadata.create_all(bind=db.engine)
@@ -181,6 +182,7 @@ def get_profile(profile_id: str, db: Session = Depends(get_db)):
 # RECORD ROUTES
 # ============================================================================
 
+
 @app.post(f"{settings.API_V1_STR}/records/upload", response_model=schemas.UploadResponse)
 async def upload_record(
     background_tasks: BackgroundTasks,
@@ -193,7 +195,7 @@ async def upload_record(
     user: TokenPayload = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
-    """Upload medical document and process with AI"""
+    """Upload medical document to Cloud Storage and process with AI"""
     
     # Validate profile and ownership
     profile = db.query(models.Profile).filter_by(id=profile_id).first()
@@ -216,26 +218,35 @@ async def upload_record(
     db.commit()
     db.refresh(db_record)
     
-    # Save file
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    user_dir = os.path.join(settings.UPLOAD_DIR, profile.user_id)
-    record_dir = os.path.join(user_dir, db_record.id)
-    os.makedirs(record_dir, exist_ok=True)
-    
+    # --- CHANGED: Upload to Supabase Storage ---
     file_extension = get_file_extension(file.filename)
     safe_filename = sanitize_filename(file.filename)
-    file_path = os.path.join(record_dir, safe_filename)
     
-    with open(file_path, "wb") as buffer:
+    # Create a unique path: user_id/record_id/filename
+    storage_path = f"{user.user_id}/{db_record.id}/{safe_filename}"
+    
+    try:
+        public_url = await upload_file_to_supabase(file, storage_path)
+    except Exception as e:
+        db.delete(db_record)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to upload file to cloud: {str(e)}")
+
+    # NOTE: We still save to a temp local file for the AI processing step
+    # because many AI libraries need a physical file path.
+    # We will clean this up later or let the OS handle temp dir cleanup.
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    temp_file_path = os.path.join(settings.UPLOAD_DIR, f"{db_record.id}_{safe_filename}")
+    with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Create file record
+    # Create file record in DB (Storing Cloud URL)
     db_file = models.RecordFile(
         record_id=db_record.id,
-        file_path=file_path,
+        file_path=public_url,  # Store Cloud URL here!
         file_type=file_extension,
         original_filename=file.filename,
-        file_size=get_file_size(file_path)
+        file_size=get_file_size(temp_file_path)
     )
     db.add(db_file)
     db.commit()
@@ -251,11 +262,11 @@ async def upload_record(
     db.add(event)
     db.commit()
     
-    # Process document in background
+    # Process document in background (Pass the TEMP local path for processing)
     background_tasks.add_task(
         process_record,
         db_record.id,
-        file_path,
+        temp_file_path, # Local temp path for AI
         file_extension
     )
     

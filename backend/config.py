@@ -15,7 +15,7 @@ class Settings:
     
     # Database
     # FORCE system temp for DB to avoid file watchers (ignores .env value)
-    DATABASE_URL: str = "postgresql://postgres:[Mayor54525555$]@db.obrguyijeairiokbnyzv.supabase.co:5432/postgres"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(tempfile.gettempdir(), 'keep.db')}")
     
     # ===========================================
     # AI PROVIDERS (Priority: OpenRouter -> Gemini)
