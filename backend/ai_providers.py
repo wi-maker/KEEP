@@ -4,7 +4,6 @@ AI Provider Abstraction for KEEP Platform
 - Google Gemini Flash as fallback
 - Automatic failover with logging
 """
-
 import os
 import logging
 from typing import Optional, List, Dict, Any
@@ -13,7 +12,8 @@ from abc import ABC, abstractmethod
 from openai import OpenAI
 import google.generativeai as genai
 
-from .config import settings
+from backend.config import settings
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
