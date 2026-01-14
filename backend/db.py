@@ -4,8 +4,13 @@ from config import settings
 
 SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 
-# Add connect_args for SQLite
+# Fix for Railway/Supabase URLs (SQLAlchemy needs 'postgresql://')
+if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Add connect_args ONLY for SQLite
 connect_args = {"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
