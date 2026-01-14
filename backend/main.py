@@ -16,7 +16,9 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 
-from backend import models, schemas, db
+from backend import models
+from backend import schemas
+from backend import db
 from backend.rag_pipeline import process_record, chat_with_rag
 from backend.config import settings
 from backend.utils import get_file_extension, sanitize_filename, get_file_size
