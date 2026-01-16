@@ -42,6 +42,7 @@ rq==1.15.1
 pytest==7.4.4
 httpx==0.26.0
 email-validator
+supabase
 
 # Notes:
 # - Tesseract OCR must be installed separately on the system
