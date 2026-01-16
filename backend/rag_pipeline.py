@@ -387,6 +387,8 @@ DOCUMENT TEXT:
 RELEVANT MEDICAL CONTEXT:
 {medical_knowledge_text}
 
+Your task is to analyze this medical document and provide a comprehensive, easy-to-understand explanation that focuses on medical meaning and implications rather than repeating the document verbatim.
+
 IMPORTANT INSTRUCTIONS:
 - Do NOT address the user by any name (real or assumed)
 - Start with: "Based on the medical document you uploaded, here is a clear explanation:"
