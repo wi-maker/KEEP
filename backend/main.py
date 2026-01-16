@@ -237,6 +237,7 @@ async def upload_record(
     # We will clean this up later or let the OS handle temp dir cleanup.
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     temp_file_path = os.path.join(settings.UPLOAD_DIR, f"{db_record.id}_{safe_filename}")
+    await file.seek(0)
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
