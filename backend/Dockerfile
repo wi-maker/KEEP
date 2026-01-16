@@ -20,4 +20,4 @@ COPY . .
 
 # 4. Start the application (FIXED LINE BELOW)
 # We removed the brackets [] so $PORT is read correctly as a number
-CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
