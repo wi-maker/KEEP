@@ -387,28 +387,30 @@ DOCUMENT TEXT:
 RELEVANT MEDICAL CONTEXT:
 {medical_knowledge_text}
 
-Your task is to analyze this medical document and provide a comprehensive, easy-to-understand explanation.
-
 IMPORTANT INSTRUCTIONS:
 - Do NOT address the user by any name (real or assumed)
 - Start with: "Based on the medical document you uploaded, here is a clear explanation:"
-- Provide detailed, medically robust information that remains accessible to non-medical readers
+- Do NOT repeat patient demographics, visit type, or obvious information unless it is necessary for medical interpretation
+- Do NOT list raw lab values or vitals unless you are explaining why they matter
+- Avoid paraphrasing the document line-by-line
+- Focus on interpretation, clinical significance, health trends, and implications
+- Provide medically accurate information that remains accessible to non-medical readers
 - Use clear, simple sentences broken down logically
 - Structure your response as: Summary → Key Details → What It Means → Recommendations
 
 Provide the following analysis in JSON format:
 
-1. SUMMARY: A detailed professional summary (3-4 sentences) explaining what this document contains and its medical purpose. Start with "Based on the medical document you uploaded, here is a clear explanation:" followed by the medical context.
+1. SUMMARY: A concise but information-dense professional summary (3–4 sentences) explaining what this document reveals about the patient’s health and its medical purpose. Start with "Based on the medical document you uploaded, here is a clear explanation:" and focus on interpretation rather than description.
 
-2. KEY FINDINGS: List 4-6 specific, detailed observations or results from the document. Each finding should be medically accurate but explained in simple terms. Include relevant numbers, measurements, or test results.
+2. KEY FINDINGS: List 4–6 clinically important findings from the document. Each finding should be medically accurate, explained in simple terms, and include numbers or test results only when they add meaningful context.
 
-3. MEDICAL SIGNIFICANCE: Explain what these findings mean in practical terms. What should the patient understand about their health based on these results?
+3. MEDICAL SIGNIFICANCE: Explain what these findings mean in practical terms. Describe current health risks, early warning signs or complications, overall disease control, and potential long-term consequences if issues are not addressed.
 
-4. CONFIDENCE SCORE: 0-100 (how clearly and completely you can interpret this document based on available information)
+4. CONFIDENCE SCORE: A number from 0–100 representing how clearly and completely this document can be interpreted based on the available information.
 
-5. QUESTIONS FOR DOCTOR: 3-4 specific, relevant questions the patient should ask their healthcare provider about these results
+5. QUESTIONS FOR DOCTOR: List 3–4 specific, practical questions the patient should ask their healthcare provider to better understand risks, treatment decisions, and next steps.
 
-6. MEDICAL SOURCES: List the reputable medical sources used (WHO, Mayo Clinic, CDC, NIH, NHS UK, MedlinePlus, Cleveland Clinic, Johns Hopkins Medicine, American Heart Association, American Cancer Society, etc.)
+6. MEDICAL SOURCES: List reputable, authoritative medical sources used to inform the explanation (e.g., WHO, Mayo Clinic, CDC, NIH, NHS UK, MedlinePlus, Cleveland Clinic, Johns Hopkins Medicine, American Heart Association).
 
 IMPORTANT: Return ONLY valid JSON in this exact format:
 {{
