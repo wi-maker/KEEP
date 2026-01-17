@@ -390,39 +390,41 @@ RELEVANT MEDICAL CONTEXT:
 Your task is to analyze this medical document and provide a comprehensive, easy-to-understand explanation that focuses on medical meaning and implications rather than repeating the document verbatim.
 
 IMPORTANT INSTRUCTIONS:
-- Do NOT address the user by any name (real or assumed)
-- Start with: "Based on the medical document you uploaded, here is a clear explanation:"
-- Do NOT repeat patient demographics, visit type, or obvious information unless it is necessary for medical interpretation
-- Do NOT list raw lab values or vitals unless you are explaining why they matter
-- Avoid paraphrasing the document line-by-line
-- Focus on interpretation, clinical significance, health trends, and implications
-- Provide medically accurate information that remains accessible to non-medical readers
-- Use clear, simple sentences broken down logically
-- Structure your response as: Summary → Key Details → What It Means → Recommendations
+- Personalize the information. 
+- Start with: "Based on the medical document you uploaded, here is a clear explanation:""  
+- Do NOT repeat patient demographics, visit type, or obvious administrative information unless it is necessary for medical interpretation.
+- Do NOT list raw lab values or vitals unless you are explaining why they matter.
+- Do NOT paraphrase the document line-by-line.
+- Focus on interpretation, not transcription.
+- Provide medically accurate information that remains accessible to non-medical readers.
+- Use clear, simple sentences broken down logically.
+
+NORMAL VS ABNORMAL FINDINGS RULE (IMPORTANT):
+- If the document shows NORMAL or UNREMARKABLE findings, summarize them collectively (e.g., "The scan did not show any significant abnormalities").
+- Do NOT list individual organs when everything is normal.
+- ONLY mention specific organs when:
+  1) There is an abnormal finding,
+  2) A specific organ explains the patient’s symptoms, or
+  3) The user explicitly asks about that organ.
+- When abnormalities exist, prioritize explaining their medical significance over listing multiple findings.
+
+STRUCTURE YOUR RESPONSE AS:
+Summary → What It Means → Recommendations
 
 Provide the following analysis in JSON format:
 
-1. SUMMARY: A concise but information-dense professional summary (3–4 sentences) explaining what this document reveals about the patient’s health and its medical purpose. Start with "Based on the medical document you uploaded, here is a clear explanation:" and focus on interpretation rather than description.
-
-2. KEY FINDINGS: List 4–6 clinically important findings from the document. Each finding should be medically accurate, explained in simple terms, and include numbers or test results only when they add meaningful context.
-
-3. MEDICAL SIGNIFICANCE: Explain what these findings mean in practical terms. Describe current health risks, early warning signs or complications, overall disease control, and potential long-term consequences if issues are not addressed.
-
-4. CONFIDENCE SCORE: A number from 0–100 representing how clearly and completely this document can be interpreted based on the available information.
-
-5. QUESTIONS FOR DOCTOR: List 3–4 specific, practical questions the patient should ask their healthcare provider to better understand risks, treatment decisions, and next steps.
-
-6. MEDICAL SOURCES: List reputable, authoritative medical sources used to inform the explanation (e.g., WHO, Mayo Clinic, CDC, NIH, NHS UK, MedlinePlus, Cleveland Clinic, Johns Hopkins Medicine, American Heart Association).
-
-IMPORTANT: Return ONLY valid JSON in this exact format:
 {{
-  "summary": "Based on the medical document you uploaded, here is a clear explanation: [Your detailed summary here]",
-  "findings": ["Detailed finding 1...", "Detailed finding 2...", "Detailed finding 3...", "Detailed finding 4..."],
-  "medical_significance": "What these findings mean for the patient's health in simple terms...",
-  "confidence": 95,
-  "questions": ["Specific question 1?", "Specific question 2?", "Specific question 3?"],
-  "sources": ["Source Name 1", "Source Name 2", "Source Name 3"]
+  "summary": "Based on the medical document you uploaded, here is a clear explanation: [Concise, interpretation-focused summary in about 2 sentences]", 
+  "medical_significance": "Explain what the findings mean in practical terms, including health risks, early warning signs, disease control, and possible long-term consequences if relevant.",
+  "confidence": 0–100,
+  "questions": [
+    "One specific, practical question the patient should ask their healthcare provider." 
+  ],
+  "sources": [
+    "Reputable medical sources used (e.g., WHO, Mayo Clinic, NHS, MedlinePlus)"
+  ]
 }}
+
 
 Do not include any text before or after the JSON."""
 
