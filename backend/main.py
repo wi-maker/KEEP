@@ -5,7 +5,7 @@ Complete implementation matching frontend features
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -314,42 +314,22 @@ def get_file(
     inline: bool = False,
     db: Session = Depends(get_db)
 ):
-    """Get record file - supports both viewing (inline=true) and downloading (inline=false)"""
+    """
+    Get record file - Redirects to the Supabase Cloud URL.
+    This fixes the issue where the app looked for a local file that didn't exist.
+    """
     record = db.query(models.Record).filter_by(id=record_id).first()
+    
+    # 1. Check if record and file exist in DB
     if not record or not record.files:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="File record not found")
     
     file_record = record.files[0]
-    if not os.path.exists(file_record.file_path):
-        raise HTTPException(status_code=404, detail="File not found on disk")
-    
-    # Determine media type based on file extension
-    file_ext = file_record.file_type.lower()
-    if file_ext == 'pdf':
-        media_type = 'application/pdf'
-    elif file_ext in ['jpg', 'jpeg']:
-        media_type = 'image/jpeg'
-    elif file_ext == 'png':
-        media_type = 'image/png'
-    elif file_ext == 'gif':
-        media_type = 'image/gif'
-    else:
-        media_type = 'application/octet-stream'
-    
-    if inline:
-        # For viewing: serve with inline disposition
-        return FileResponse(
-            file_record.file_path,
-            media_type=media_type,
-            headers={"Content-Disposition": f'inline; filename="{file_record.original_filename}"'}
-        )
-    else:
-        # For downloading: serve with attachment disposition
-        return FileResponse(
-            file_record.file_path,
-            filename=file_record.original_filename,
-            media_type='application/octet-stream'
-        )
+
+    # 2. Redirect to the cloud URL
+    # Your upload function saves the Supabase Public URL into 'file_path',
+    # so we can just send the user there directly.
+    return RedirectResponse(url=file_record.file_path)
 
 @app.put(f"{settings.API_V1_STR}/records/{{record_id}}", response_model=schemas.Record)
 def update_record(
