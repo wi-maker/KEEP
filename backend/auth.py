@@ -38,6 +38,7 @@ class TokenPayload:
         self.role = payload.get("role", "authenticated")
         self.exp = payload.get("exp")
         self.user_metadata = payload.get("user_metadata", {})
+        self.phone_claim = payload.get("phone")
     
     @property
     def full_name(self) -> Optional[str]:
@@ -46,6 +47,11 @@ class TokenPayload:
     @property
     def avatar_url(self) -> Optional[str]:
         return self.user_metadata.get("avatar_url")
+    
+    @property
+    def phone(self) -> Optional[str]:
+        """Get phone number from user_metadata or direct claim."""
+        return self.user_metadata.get("phone") or self.phone_claim
 
 
 async def verify_token(

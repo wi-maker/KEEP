@@ -84,6 +84,7 @@ def sync_user(
     user_id = user_token.user_id
     email = user_token.email
     full_name = user_token.full_name or email.split("@")[0]
+    phone = user_token.phone  # Extract phone from token
     
     # Check if user exists
     user = db.query(models.User).filter_by(id=user_id).first()
@@ -94,6 +95,7 @@ def sync_user(
             id=user_id,  # Use Supabase ID
             email=email,
             full_name=full_name,
+            phone=phone,
             is_active=True
         )
         db.add(user)
@@ -113,6 +115,12 @@ def sync_user(
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Update existing user with latest data from token
+        user.full_name = full_name
+        user.phone = phone
+        db.commit()
+        db.refresh(user)
             
     return user
 
@@ -127,6 +135,42 @@ def get_current_user_profile(
         # If user has token but not in DB, auto-sync
         return sync_user(user_token, db)
     return user
+
+
+@app.delete(f"{settings.API_V1_STR}/auth/me")
+def delete_current_user_account(
+    user_token: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """
+    Permanently delete the current user's account.
+    This will delete all user data including profiles, records, and vector embeddings.
+    """
+    user_id = user_token.user_id
+    
+    # Find the user
+    user = db.query(models.User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Import chroma_client for vector deletion
+    from rag_pipeline import chroma_client
+    
+    # Delete vector data for all user's records
+    for profile in user.profiles:
+        for record in profile.records:
+            try:
+                chroma_client.delete_user_document(record.id)
+            except Exception as e:
+                # Log but continue - we still want to delete the user
+                import logging
+                logging.warning(f"Failed to delete vector data for record {record.id}: {e}")
+    
+    # Delete the user (cascade will handle profiles, records, shares, chat_history)
+    db.delete(user)
+    db.commit()
+    
+    return {"message": "Account successfully deleted"}
 
 # ============================================================================
 # PROFILE ROUTES
@@ -375,7 +419,7 @@ def delete_record(record_id: str, db: Session = Depends(get_db)):
                 pass  # Directory not empty or other error, ignore
     
     # Delete from ChromaDB
-    from .rag_pipeline import chroma_client
+    from rag_pipeline import chroma_client
     chroma_client.delete_user_document(record_id)
     
     # Create timeline event before deletion

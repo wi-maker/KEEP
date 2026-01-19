@@ -143,9 +143,7 @@
       </div>
     </nav>
 
-    <button
-      onclick="event.preventDefault(); app.nav('profile')"
-      id="nav-profile"
+    <button onclick="event.preventDefault(); app.nav('profile')" id="nav-profile"
       class="w-full text-left p-6 mt-auto border-t border-gray-100 hover:bg-gray-50 transition-colors">
 
       <div class="flex items-center gap-3">
@@ -433,8 +431,7 @@
               class="flex-1 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-600">
               <i class="fas fa-download mr-2"></i> Download My Data
             </button>
-            <button
-              onclick="confirm('Are you sure you want to delete your account? This cannot be undone.') && alert('Account deletion request submitted (stub)')"
+            <button onclick="app.deleteAccount()"
               class="flex-1 py-2 border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
               <i class="fas fa-trash-alt mr-2"></i> Delete Account
             </button>
@@ -1055,7 +1052,23 @@
     }
 
     async function handleUserSession(session) {
-      // 1. Critical Auth Sync
+      // INSTANT LOAD: Immediately populate UI with session data (no waiting for API)
+      const sessionUser = session.user;
+      const sessionMetadata = sessionUser?.user_metadata || {};
+      const instantName = sessionMetadata.full_name || sessionUser?.email?.split('@')[0] || 'User';
+
+      // Populate DOM elements immediately for perceived instant load
+      const welcomeMsg = document.getElementById('welcome-msg');
+      const headerAvatar = document.getElementById('header-avatar');
+      const sidebarName = document.getElementById('sidebar-name');
+      const sidebarAvatar = document.getElementById('sidebar-avatar');
+
+      if (welcomeMsg) welcomeMsg.innerText = `Welcome, ${instantName.split(' ')[0]}!`;
+      if (headerAvatar) headerAvatar.innerText = instantName.charAt(0).toUpperCase();
+      if (sidebarName) sidebarName.innerText = instantName;
+      if (sidebarAvatar) sidebarAvatar.innerText = instantName.charAt(0).toUpperCase();
+
+      // 1. Critical Auth Sync (happens in background)
       try {
         currentUser = await apiCall('/auth/sync', { method: 'POST' });
         hideLoginModal();
@@ -1199,13 +1212,13 @@
         setAuthLoading(false);
         document.getElementById('auth-form-container').classList.add('hidden');
         document.getElementById('auth-success-msg').classList.remove('hidden');
-        
+
       } catch (e) {
         showAuthError(e.message);
         setAuthLoading(false);
       }
     }
-    
+
     async function signOut() {
       try {
         await supabaseClient.auth.signOut();
@@ -1460,10 +1473,18 @@
         if (error) {
           this.toast('Error updating profile: ' + error.message);
         } else {
+          // Sync with backend to persist phone number
+          try {
+            currentUser = await apiCall('/auth/sync', { method: 'POST' });
+          } catch (syncError) {
+            console.warn('Profile sync to backend failed:', syncError);
+          }
+
           this.toast('Profile updated successfully');
           // Update local state immediately for UI responsiveness
           if (currentUser) {
             currentUser.full_name = name;
+            currentUser.phone = phone;
             if (!currentUser.user_metadata) currentUser.user_metadata = {};
             currentUser.user_metadata.phone = phone;
           }
@@ -1482,6 +1503,42 @@
           this.toast('Error: ' + error.message);
         } else {
           this.toast('Password reset email sent to ' + currentUser.email);
+        }
+      },
+
+      async deleteAccount() {
+        // First confirmation
+        if (!confirm('Are you sure you want to delete your account? This action is PERMANENT and cannot be undone.')) {
+          return;
+        }
+
+        // Second confirmation for safety
+        if (!confirm('This will permanently delete all your health records, profiles, and data. Type OK to proceed.')) {
+          return;
+        }
+
+        try {
+          // Call backend to delete account
+          await apiCall('/auth/me', { method: 'DELETE' });
+
+          // Sign out from Supabase
+          await supabaseClient.auth.signOut();
+
+          // Clear local state
+          currentUser = null;
+          currentProfile = null;
+          profiles = [];
+          records = [];
+          localStorage.removeItem('keep_current_profile_id');
+
+          this.toast('Account successfully deleted. Goodbye!');
+
+          // Redirect to login
+          showLoginModal();
+
+        } catch (error) {
+          console.error('Account deletion failed:', error);
+          this.toast('Failed to delete account: ' + error.message);
         }
       },
 
@@ -2129,7 +2186,34 @@
       },
 
       openCreateProfileModal() {
-        document.getElementById('profile-modal').classList.remove('hidden');
+        // Show "Coming Soon" modal instead of actual form
+        this.showComingSoon();
+      },
+
+      showComingSoon() {
+        const modalHtml = `
+          <div id="coming-soon-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center fade-in">
+              <div class="w-20 h-20 bg-keep-light rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-heartbeat text-4xl text-keep-dark"></i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 mb-2">Coming Soon</h3>
+              <p class="text-gray-600 text-sm mb-6">
+                We're working hard to bring you the ability to add and manage family member profiles. 
+                Stay tuned for this exciting feature!
+              </p>
+              <div class="flex items-center justify-center gap-2 text-keep-dark mb-6">
+                <i class="fas fa-stethoscope"></i>
+                <span class="text-sm font-medium">Your health, our priority</span>
+              </div>
+              <button onclick="document.getElementById('coming-soon-modal').remove()" 
+                class="w-full bg-keep-dark text-white py-3 rounded-xl font-semibold hover:bg-keep-green transition-colors">
+                Got it
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
       },
 
       async createProfile() {
@@ -2286,7 +2370,7 @@
 
           const { data: { session } } = await supabaseClient.auth.getSession();
           const token = session?.access_token;
-          
+
           const response = await fetch(`${API_V1}/chat/stream`, {
             method: 'POST',
             headers: {
@@ -2418,62 +2502,107 @@
     });
   </script>
 
-  <div id="login-modal" class="fixed inset-0 bg-white backdrop-blur-sm z-50 hidden flex items-center justify-center">
-    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 transition-all" id="auth-container">
-      
+  <div id="login-modal"
+    class="fixed inset-0 bg-gray-50 z-[100] hidden flex items-center justify-center overflow-hidden">
+
+    <div class="absolute inset-0 z-0 overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-keep-light via-white to-keep-accent/20"></div>
+
+      <div class="absolute top-[-5%] left-[-5%] text-keep-green/5 transform rotate-12 animate-pulse"
+        style="animation-duration: 4s;">
+        <i class="fas fa-file-medical text-[20rem]"></i>
+      </div>
+      <div class="absolute bottom-[-10%] right-[-5%] text-keep-dark/5 transform -rotate-12">
+        <i class="fas fa-shield-virus text-[25rem]"></i>
+      </div>
+      <div class="absolute top-[20%] right-[10%] text-keep-green/10 transform rotate-45">
+        <i class="fas fa-dna text-8xl"></i>
+      </div>
+      <div class="absolute bottom-[20%] left-[10%] text-keep-accent/30 transform -rotate-12">
+        <i class="fas fa-folder-open text-9xl"></i>
+      </div>
+    </div>
+
+    <div
+      class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 transition-all relative z-10 border border-white/50"
+      id="auth-container">
+
       <div id="auth-form-container">
-      
+
         <div class="text-center mb-8">
-          <div class="w-16 h-16 bg-keep-light rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fas fa-heartbeat text-3xl text-keep-green"></i>
+          <div
+            class="w-20 h-20 bg-gradient-to-br from-keep-green to-keep-dark rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-5 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+            <i class="fas fa-heartbeat text-4xl text-white"></i>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900" id="auth-title">Welcome Back</h2>
-          <p class="text-gray-500 mt-2" id="auth-subtitle">Your Personal Health Vault</p>
+          <h2 class="text-3xl font-bold text-gray-900 tracking-tight" id="auth-title"
+            style="font-family: 'Playfair Display', serif;">Welcome Back</h2>
+          <p class="text-gray-500 mt-2 font-medium" id="auth-subtitle">Access your secure health vault</p>
         </div>
 
         <button onclick="signInWithGoogle()"
-          class="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 mb-6 shadow-sm">
-          <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
-          Continue with Google
+          class="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 mb-6 shadow-sm hover:shadow-md group">
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg"
+            class="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google">
+          <span>Continue with Google</span>
         </button>
 
         <div class="relative my-6">
           <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-200"></div>
+            <div class="w-full border-t border-gray-300"></div>
           </div>
           <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-white text-gray-500">Or continue with email</span>
+            <span class="px-4 bg-transparent backdrop-blur-xl text-gray-500 font-medium">Or continue with email</span>
           </div>
         </div>
 
         <div id="auth-error-msg"
-          class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm text-center border border-red-100 flex items-center justify-center gap-2">
+          class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm text-center border border-red-100 flex items-center justify-center gap-2 animate-bounce">
           <i class="fas fa-exclamation-circle"></i>
           <span></span>
         </div>
 
-        <form onsubmit="event.preventDefault(); handleAuthSubmit(this);" class="space-y-4">
-          <div id="auth-name-field" class="hidden">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input type="text" name="fullname" placeholder="John Doe"
-              class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-transparent outline-none transition-all">
+        <form id="auth-form" onsubmit="event.preventDefault(); handleAuthSubmit(this);" class="space-y-4">
+          <div id="auth-name-field" class="hidden fade-in">
+            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 ml-1">Full Name</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="far fa-user text-gray-400"></i>
+              </div>
+              <input type="text" name="fullname" placeholder="John Doe"
+                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-keep-green outline-none transition-all placeholder-gray-400 text-gray-900">
+            </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" name="email" required placeholder="you@example.com"
-              class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-transparent outline-none transition-all">
+            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 ml-1">Email</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="far fa-envelope text-gray-400"></i>
+              </div>
+              <input type="email" name="email" required placeholder="name@example.com"
+                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-keep-green outline-none transition-all placeholder-gray-400 text-gray-900">
+            </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input type="password" name="password" required placeholder="••••••••"
-              class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-transparent outline-none transition-all">
+            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 ml-1">Password</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-lock text-gray-400"></i>
+              </div>
+              <input type="password" name="password" id="auth-password-input" required placeholder="••••••••"
+                class="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-keep-green focus:border-keep-green outline-none transition-all placeholder-gray-400 text-gray-900">
+
+              <button type="button" onclick="togglePasswordVisibility()"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-keep-dark transition-colors cursor-pointer outline-none">
+                <i class="far fa-eye" id="password-eye-icon"></i>
+              </button>
+            </div>
           </div>
 
-          <div class="pt-2">
+          <div class="pt-3">
             <button type="submit" id="auth-submit-btn"
-              class="w-full bg-keep-green text-white font-semibold py-3 px-4 rounded-xl hover:bg-keep-dark transition-colors shadow-lg shadow-keep-green/30">
+              class="w-full bg-keep-dark text-white font-bold py-3.5 px-4 rounded-xl hover:bg-keep-green transition-all duration-200 shadow-lg shadow-keep-green/20 hover:shadow-keep-green/40 transform hover:-translate-y-0.5">
               Sign In
             </button>
           </div>
@@ -2481,23 +2610,26 @@
 
         <div class="mt-6 text-center">
           <button onclick="toggleAuthMode()"
-            class="text-keep-dark hover:text-keep-green font-medium text-sm transition-colors">
-            <span id="auth-toggle-text">Don't have an account? Sign up</span>
+            class="text-gray-600 hover:text-keep-green font-medium text-sm transition-colors hover:underline underline-offset-4">
+            <span id="auth-toggle-text">Don't have an account? <span class="text-keep-dark font-bold">Sign
+                up</span></span>
           </button>
         </div>
 
-      </div> 
-      <div id="auth-success-msg" class="hidden text-center py-4">
-        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-          <i class="fas fa-envelope-open-text text-4xl text-green-600"></i>
+      </div>
+
+      <div id="auth-success-msg" class="hidden text-center py-8 fade-in">
+        <div
+          class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce shadow-inner">
+          <i class="fas fa-envelope-open-text text-5xl text-green-600"></i>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Check your inbox</h2>
-        <p class="text-gray-500 mb-8 leading-relaxed">
-          We've sent a confirmation link to your email address.<br>
-          Please click the link to activate your account.
+        <h2 class="text-2xl font-bold text-gray-900 mb-3">Check your inbox</h2>
+        <p class="text-gray-500 mb-8 leading-relaxed max-w-xs mx-auto">
+          We've sent a secure login link to your email address.<br>
+          <span class="text-sm">Click the link to verify your account.</span>
         </p>
-        <button onclick="location.reload()" 
-          class="w-full bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
+        <button onclick="location.reload()"
+          class="w-full bg-gray-100 text-gray-700 font-bold py-3.5 px-4 rounded-xl hover:bg-gray-200 transition-colors">
           Back to Login
         </button>
       </div>
@@ -2505,29 +2637,60 @@
   </div>
 
   <script>
-    // Auth State
+
+    // --- AUTH UI LOGIC ---
+
+    // 1. Password Visibility Toggle
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('auth-password-input');
+      const eyeIcon = document.getElementById('password-eye-icon');
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+      }
+    }
+
+    // 2. Updated Toggle Mode (Clears form when switching)
     let isSignupMode = false;
 
     function toggleAuthMode() {
+      // CLEAR FORM DATA HERE
+      const form = document.getElementById('auth-form');
+      if (form) form.reset();
+
+      // Switch Mode Logic
       isSignupMode = !isSignupMode;
       const title = document.getElementById('auth-title');
+      const subtitle = document.getElementById('auth-subtitle');
       const nameField = document.getElementById('auth-name-field');
       const submitBtn = document.getElementById('auth-submit-btn');
       const toggleText = document.getElementById('auth-toggle-text');
 
       if (isSignupMode) {
         title.innerText = 'Create Account';
+        subtitle.innerText = 'Start your journey to better health';
         nameField.classList.remove('hidden');
         document.querySelector('input[name="fullname"]').required = true;
-        submitBtn.innerText = 'Sign Up';
-        toggleText.innerText = 'Already have an account? Sign in';
+        submitBtn.innerText = 'Create Secure Account';
+        toggleText.innerHTML = 'Already have an account? <span class="text-keep-dark font-bold">Sign in</span>';
       } else {
         title.innerText = 'Welcome Back';
+        subtitle.innerText = 'Access your secure health vault';
         nameField.classList.add('hidden');
         document.querySelector('input[name="fullname"]').required = false;
         submitBtn.innerText = 'Sign In';
-        toggleText.innerText = "Don't have an account? Sign up";
+        toggleText.innerHTML = 'Don\'t have an account? <span class="text-keep-dark font-bold">Sign up</span>';
       }
+
+      // Hide any previous error messages
+      const errorDiv = document.getElementById('auth-error-msg');
+      if (errorDiv) errorDiv.classList.add('hidden');
     }
 
     async function handleAuthSubmit(form) {
