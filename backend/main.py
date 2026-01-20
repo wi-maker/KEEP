@@ -137,14 +137,15 @@ def get_current_user_profile(
     return user
 
 
-@app.delete(f"{settings.API_V1_STR}/auth/me")
-def delete_current_user_account(
+@app.delete(f"{settings.API_V1_STR}/auth/data")
+def delete_user_medical_data(
     user_token: TokenPayload = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
     """
-    Permanently delete the current user's account.
-    This will delete all user data including profiles, records, and vector embeddings.
+    Delete all medical data for the current user.
+    This deletes Records, Files, TimelineEvents, and Vector Embeddings.
+    The User and Profile remain active.
     """
     user_id = user_token.user_id
     
@@ -155,6 +156,71 @@ def delete_current_user_account(
     
     # Import chroma_client for vector deletion
     from rag_pipeline import chroma_client
+    import logging
+    
+    deleted_records = 0
+    deleted_events = 0
+    
+    # Delete vector data and records for all user's profiles
+    for profile in user.profiles:
+        # Delete timeline events for this profile
+        events = db.query(models.TimelineEvent).filter_by(profile_id=profile.id).all()
+        for event in events:
+            db.delete(event)
+            deleted_events += 1
+        
+        # Delete records and their vector embeddings
+        for record in profile.records:
+            try:
+                chroma_client.delete_user_document(record.id)
+            except Exception as e:
+                logging.warning(f"Failed to delete vector data for record {record.id}: {e}")
+            
+            # Files are deleted via cascade when record is deleted
+            db.delete(record)
+            deleted_records += 1
+    
+    # Also delete user-level timeline events (those without profile_id)
+    user_events = db.query(models.TimelineEvent).filter_by(user_id=user_id, profile_id=None).all()
+    for event in user_events:
+        db.delete(event)
+        deleted_events += 1
+    
+    # Clear chat history
+    db.query(models.ChatHistory).filter_by(user_id=user_id).delete()
+    
+    # Delete shares
+    db.query(models.Share).filter_by(user_id=user_id).delete()
+    
+    db.commit()
+    
+    return {
+        "message": "Medical data deleted successfully",
+        "deleted_records": deleted_records,
+        "deleted_events": deleted_events
+    }
+
+
+@app.delete(f"{settings.API_V1_STR}/auth/me")
+def delete_current_user_account(
+    user_token: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """
+    Permanently delete the current user's account.
+    This will delete all user data including profiles, records, vector embeddings,
+    and also removes the user from Supabase Auth.
+    """
+    user_id = user_token.user_id
+    
+    # Find the user
+    user = db.query(models.User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Import chroma_client for vector deletion
+    from rag_pipeline import chroma_client
+    import logging
     
     # Delete vector data for all user's records
     for profile in user.profiles:
@@ -162,15 +228,24 @@ def delete_current_user_account(
             try:
                 chroma_client.delete_user_document(record.id)
             except Exception as e:
-                # Log but continue - we still want to delete the user
-                import logging
                 logging.warning(f"Failed to delete vector data for record {record.id}: {e}")
     
-    # Delete the user (cascade will handle profiles, records, shares, chat_history)
+    # Delete the user from local DB (cascade will handle profiles, records, shares, chat_history)
     db.delete(user)
     db.commit()
     
+    # Delete user from Supabase Auth (requires service role key)
+    try:
+        from storage import supabase
+        # Use admin API to delete authäuser
+        supabase.auth.admin.delete_user(user_id)
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to delete user from Supabase Auth: {e}")
+        # Continue anyway - local data is already deleted
+    
     return {"message": "Account successfully deleted"}
+
 
 # ============================================================================
 # PROFILE ROUTES
@@ -708,27 +783,45 @@ def revoke_share(share_id: str, user: TokenPayload = Depends(verify_token), db: 
     
     return {"message": "Share link revoked"}
 
-@app.get(f"/s/{{token}}")
-def access_share(token: str, db: Session = Depends(get_db)):
-    """Public share access (no auth required)"""
+@app.get("/s/{token}")
+def access_share_redirect(token: str):
+    """
+    Public share access - Redirects to frontend with share_token parameter.
+    The frontend will then fetch data from the public API endpoint.
+    """
+    # Redirect to frontend with share_token
+    # Frontend should be configured to handle this URL parameter
+    return RedirectResponse(url=f"/?share_token={token}")
+
+
+@app.get(f"{settings.API_V1_STR}/shares/public/{{token}}")
+def get_public_share_data(token: str, db: Session = Depends(get_db)):
+    """
+    Public API endpoint to fetch share data (no auth required).
+    Used by frontend after redirect from /s/{token}.
+    """
     share = db.query(models.Share).filter_by(token=token).first()
     
     if not share:
         raise HTTPException(status_code=404, detail="Share not found")
     
-    if share.status != "active":
-        raise HTTPException(status_code=403, detail=f"Share link is {share.status}")
+    if share.status == "revoked":
+        raise HTTPException(status_code=403, detail="Share link has been revoked")
     
     if share.expires_at < datetime.now():
+        # Update status to expired
         share.status = "expired"
         db.commit()
         raise HTTPException(status_code=403, detail="Share link has expired")
+    
+    if share.status != "active":
+        raise HTTPException(status_code=403, detail=f"Share link is {share.status}")
     
     # Increment views
     share.views += 1
     db.commit()
     
-    # Get records
+    # Get records with full details
     records = db.query(models.Record)\
         .filter(models.Record.id.in_(share.record_ids))\
         .all()
@@ -737,7 +830,8 @@ def access_share(token: str, db: Session = Depends(get_db)):
         "share_name": share.name,
         "recipient": share.recipient_name,
         "records": [schemas.Record.from_orm(r) for r in records],
-        "expires_at": share.expires_at
+        "expires_at": share.expires_at,
+        "views": share.views
     }
 
 # ============================================================================
