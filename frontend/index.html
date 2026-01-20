@@ -1442,7 +1442,8 @@
         recipient: s.recipient_name,
         count: s.record_count,
         status: s.status.charAt(0).toUpperCase() + s.status.slice(1),
-        expiry: new Date(s.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        expiry: new Date(s.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        token: s.token
       }));
 
       app.renderShares();
@@ -2208,7 +2209,7 @@
           this.toast('Secure Link Created');
 
           // Show Success Modal with Link
-          const shareUrl = `${window.location.origin}/s/${shareData.id}`;
+          const shareUrl = `${window.location.origin}/?share_token=${shareData.token}`;
 
           // Create a temporary modal for this success state if one doesn't exist
           // Or just use alert/prompt for now to ensure visibility as requested
@@ -2246,8 +2247,11 @@
 
       copyShareLink(shareId) {
         const share = shares.find(s => s.id === shareId);
-        if (!share) return;
-        const shareUrl = `${window.location.origin}/s/${shareId}`;
+        if (!share || !share.token) {
+          this.toast('Unable to copy link');
+          return;
+        }
+        const shareUrl = `${window.location.origin}/?share_token=${share.token}`;
         navigator.clipboard.writeText(shareUrl).then(() => {
           this.toast('Link copied to clipboard!');
         }).catch(() => {

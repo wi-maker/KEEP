@@ -158,6 +158,7 @@ class ShareList(BaseModel):
     status: str
     expires_at: datetime
     views: int
+    token: str
 
 # --- Timeline Schemas ---
 class TimelineEvent(BaseModel):

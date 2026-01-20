@@ -764,7 +764,8 @@ def get_shares(user: TokenPayload = Depends(verify_token), db: Session = Depends
         "record_count": len(s.record_ids) if s.record_ids else 0,
         "status": s.status,
         "expires_at": s.expires_at,
-        "views": s.views
+        "views": s.views,
+        "token": s.token
     } for s in shares]
 
 @app.put(f"{settings.API_V1_STR}/shares/{{share_id}}/revoke")
