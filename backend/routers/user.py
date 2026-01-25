@@ -30,7 +30,7 @@ def format_relative_time(dt: datetime) -> str:
         days = diff.days
         return f"{days} day{'s' if days > 1 else ''} ago"
 
-@router.get("/notifications", response_model=List[schemas.NotificationItem])
+@router.get("/notifications")
 async def get_user_notifications(
     user: TokenPayload = Depends(verify_token),
     db: Session = Depends(get_db)
@@ -39,45 +39,47 @@ async def get_user_notifications(
     Get combined list of system announcements and personal notifications.
     Used for the notification bell.
     """
-    # 1. Fetch User Notifications
-    notifs = db.query(models.Notification)\
+    # 1. Fetch Active Global Announcements
+    # We remove strict is_active filter just in case, or ensure defaults are respected
+    announcements = db.query(models.Announcement)\
+        .order_by(models.Announcement.created_at.desc())\
+        .limit(5)\
+        .all()
+        
+    # 2. Fetch Personal Notifications
+    personal = db.query(models.Notification)\
         .filter(models.Notification.user_id == user.user_id)\
         .order_by(models.Notification.created_at.desc())\
         .limit(20)\
         .all()
         
-    # 2. Fetch Active Announcements
-    anns = db.query(models.Announcement)\
-        .filter(models.Announcement.is_active == True)\
-        .order_by(models.Announcement.created_at.desc())\
-        .limit(5)\
-        .all()
-        
-    combined = []
+    results = []
     
-    # Add Announcements (showing as unread generally, or frontend handles logic)
-    for a in anns:
-        combined.append(schemas.NotificationItem(
-            id=str(a.id),
-            title=a.title,
-            message=a.message,
-            type="announcement",
-            read=False, # Announcements are effectively unread until dismissed on frontend
-            time=format_relative_time(a.created_at)
-        ))
+    # Add Announcements (Global)
+    for a in announcements:
+        # Check if active if column exists/is populated, otherwise default to show
+        if hasattr(a, 'is_active') and a.is_active is False:
+            continue
+            
+        results.append({
+            "id": str(a.id),
+            "title": a.title,
+            "message": a.message,
+            "type": "announcement",
+            "time": format_relative_time(a.created_at),
+            "read": False # Announcements always unread/highlighted
+        })
         
-    # Add User Notifications
-    for n in notifs:
-        combined.append(schemas.NotificationItem(
-            id=str(n.id),
-            title=n.title,
-            message=n.message,
-            type=n.type,
-            read=n.read,
-            time=format_relative_time(n.created_at)
-        ))
-        
-    # Re-sort by time (approximation as time string loses precision, but list is short)
-    # Actually just returning combined list is fine, frontend can sort or just display announcements first
+    # Add Personal Notifications
+    for n in personal:
+        results.append({
+            "id": str(n.id),
+            "title": n.title,
+            "message": n.message,
+            "type": n.type or "info",
+            "time": format_relative_time(n.created_at),
+            "read": n.read
+        })
     
-    return combined
+    return results
+
