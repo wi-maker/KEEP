@@ -56,30 +56,54 @@ async def get_user_notifications(
     results = []
     
     # Add Announcements (Global)
+    # DEBUG: Inject a test notification to verify endpoint
+    results.append({
+        "id": "debug-1",
+        "title": "SYSTEM TEST",
+        "message": "If you see this, the endpoint is working.",
+        "type": "announcement",
+        "time": "Just now",
+        "read": False
+    })
+
     for a in announcements:
-        # Check if active if column exists/is populated, otherwise default to show
+        # Safety check for is_active
         if hasattr(a, 'is_active') and a.is_active is False:
             continue
             
+        # Safety for time
+        time_str = "Recently"
+        if hasattr(a, 'created_at') and a.created_at:
+            try:
+                time_str = format_relative_time(a.created_at)
+            except:
+                pass
+                
         results.append({
             "id": str(a.id),
             "title": a.title,
             "message": a.message,
             "type": "announcement",
-            "time": format_relative_time(a.created_at),
-            "read": False # Announcements always unread/highlighted
+            "time": time_str,
+            "read": False
         })
         
     # Add Personal Notifications
     for n in personal:
+        time_str = "Recently"
+        if hasattr(n, 'created_at') and n.created_at:
+            try:
+                time_str = format_relative_time(n.created_at)
+            except:
+                pass
+                
         results.append({
             "id": str(n.id),
             "title": n.title,
             "message": n.message,
             "type": n.type or "info",
-            "time": format_relative_time(n.created_at),
+            "time": time_str,
             "read": n.read
         })
     
     return results
-
