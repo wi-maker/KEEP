@@ -5,7 +5,7 @@ Protected endpoints for admin dashboard functionality
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import List
 from datetime import datetime, timedelta, timezone
 
@@ -308,10 +308,11 @@ async def get_system_health(
     """Get system health status"""
     # Check database connection
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db_status = "healthy"
-    except Exception:
-        db_status = "unhealthy"
+    except Exception as e:
+        print(f"Health check failed: {e}")
+        db_status = "down"
     
     services = [
         {"name": "API Service", "status": "healthy", "uptime": 99.9, "last_check": "1 min ago"},
@@ -426,4 +427,3 @@ async def get_admin_records(
         recent_uploads=recent_uploads,
         upload_trends=upload_trends
     )
-
