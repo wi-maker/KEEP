@@ -182,10 +182,30 @@
       <div class="hidden md:block text-sm text-gray-500" id="header-date"></div>
 
       <div class="flex items-center gap-4 md:gap-6">
-        <button class="text-gray-400 hover:text-gray-600 relative">
-          <i class="far fa-bell text-xl"></i>
-          <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <!-- Notifications -->
+        <div class="relative">
+          <button id="notification-btn" onclick="toggleNotifications()"
+            class="text-gray-400 hover:text-keep-dark relative transition-colors focus:outline-none">
+            <i class="far fa-bell text-xl"></i>
+            <span id="notification-badge"
+              class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden"></span>
+          </button>
+
+          <!-- Notification Dropdown -->
+          <div id="notification-dropdown"
+            class="hidden absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 transform origin-top-right transition-all">
+            <div class="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+              <h3 class="font-bold text-gray-900 text-sm">Notifications</h3>
+              <!-- <button class="text-xs text-keep-green font-medium hover:text-keep-dark transition-colors">Mark all read</button> -->
+            </div>
+            <div id="notification-list" class="max-h-[400px] overflow-y-auto custom-scrollbar">
+              <div class="p-8 text-center">
+                <i class="far fa-bell-slash text-gray-300 text-2xl mb-2"></i>
+                <p class="text-xs text-gray-400">No new notifications</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Profile Dropdown Trigger -->
         <div class="relative">
@@ -1136,6 +1156,130 @@
       }
     }
 
+    // ============================================
+    // NOTIFICATIONS & ANNOUNCEMENTS
+    // ============================================
+
+    function toggleNotifications() {
+      const dropdown = document.getElementById('notification-dropdown');
+      dropdown.classList.toggle('hidden');
+      if (!dropdown.classList.contains('hidden')) {
+        // If opening, mark badge as seen (optional, or wait for explicit read)
+        // document.getElementById('notification-badge').classList.add('hidden');
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const btn = document.getElementById('notification-btn');
+      const dropdown = document.getElementById('notification-dropdown');
+      if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    async function checkNotifications() {
+      if (!currentUser) return;
+
+      try {
+        // Use the new endpoint
+        const notifications = await apiCall('/user/notifications'); // Matches router prefix
+
+        // Update Badge
+        const badge = document.getElementById('notification-badge');
+        const unreadCount = notifications.filter(n => !n.read).length;
+
+        if (unreadCount > 0) {
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+
+        // Render List
+        const list = document.getElementById('notification-list');
+        if (notifications.length === 0) {
+          list.innerHTML = `
+            <div class="p-8 text-center">
+              <i class="far fa-bell-slash text-gray-300 text-2xl mb-2"></i>
+              <p class="text-xs text-gray-400">No new notifications</p>
+            </div>`;
+        } else {
+          list.innerHTML = notifications.map(n => `
+            <div class="px-5 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer relative group">
+              <div class="flex items-start gap-3">
+                <div class="w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${n.read ? 'bg-transparent' : 'bg-red-500'}"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">${n.title}</p>
+                  <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">${n.message}</p>
+                  <p class="text-[10px] text-gray-400 mt-1">${n.time}</p>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        return notifications; // Return for other uses
+      } catch (e) {
+        console.warn('Notification check failed', e);
+        return [];
+      }
+    }
+
+    function startNotificationPoller() {
+      checkNotifications();
+      // Poll every 60 seconds
+      setInterval(checkNotifications, 60000);
+    }
+
+    async function checkLoginAnnouncement() {
+      try {
+        const notifications = await checkNotifications(); // Re-use the fetch
+
+        // Filter for announcements
+        const announcements = notifications.filter(n => n.type === 'announcement');
+        if (announcements.length === 0) return;
+
+        // Get latest announcement
+        const latest = announcements[0]; // Assuming sorted by date desc from backend
+        const lastSeen = localStorage.getItem('last_seen_announcement');
+
+        if (lastSeen !== latest.id) {
+          showAnnouncementModal(latest);
+          localStorage.setItem('last_seen_announcement', latest.id);
+        }
+      } catch (e) { console.warn('Announcement check failed', e); }
+    }
+
+    function showAnnouncementModal(announcement) {
+      const modalHtml = `
+          <div id="announcement-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
+             <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-scale-in relative overflow-hidden">
+                <!-- Decoration -->
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-keep-green to-keep-dark"></div>
+                
+                <div class="flex items-start justify-between mb-4">
+                  <div class="w-10 h-10 bg-keep-light rounded-full flex items-center justify-center">
+                    <i class="fas fa-bullhorn text-keep-dark"></i>
+                  </div>
+                  <button onclick="document.getElementById('announcement-modal').remove()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                
+                <h3 class="text-xl font-bold text-gray-900 mb-2">${announcement.title}</h3>
+                <div class="prose prose-sm text-gray-600 mb-6">
+                  <p>${announcement.message}</p>
+                </div>
+                
+                <button onclick="document.getElementById('announcement-modal').remove()" class="w-full bg-keep-dark text-white py-3 rounded-xl font-semibold hover:bg-keep-green transition-colors shadow-lg shadow-keep-green/20">
+                  Got it
+                </button>
+             </div>
+          </div>
+        `;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
     async function handleUserSession(session) {
       // INSTANT LOAD: Immediately populate UI with session data (no waiting for API)
       const sessionUser = session.user;
@@ -1186,6 +1330,10 @@
         }
 
         updateUI();
+
+        // 3. Notifications & Announcements
+        startNotificationPoller();
+        checkLoginAnnouncement();
       } catch (error) {
         console.error("Data loading warning:", error);
         app.toast('Some data failed to load. Please refresh.');

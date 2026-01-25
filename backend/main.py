@@ -27,6 +27,7 @@ from utils import get_file_extension, sanitize_filename, get_file_size
 from auth import verify_token, TokenPayload, get_current_user_id
 from storage import upload_file_to_supabase, download_file_from_supabase
 from routers import admin as admin_router
+from routers import user as user_router
 
 # Create tables
 models.Base.metadata.create_all(bind=db.engine)
@@ -53,6 +54,7 @@ app.add_middleware(
 
 # Include admin router
 app.include_router(admin_router.router, prefix=settings.API_V1_STR)
+app.include_router(user_router.router, prefix=settings.API_V1_STR)
 
 # Dependency
 def get_db():

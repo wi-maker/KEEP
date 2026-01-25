@@ -251,3 +251,25 @@ class SystemHealth(BaseModel):
     services: List[dict]
     recent_logs: List[dict]
 
+
+# --- Admin Records Schemas ---
+class AdminRecordItem(BaseModel):
+    title: str
+    type: str
+    user: str
+    date: str
+    status: str
+
+class AdminRecordsResponse(BaseModel):
+    by_type: dict
+    recent_uploads: List[AdminRecordItem]
+    upload_trends: List[int]
+
+class AnnouncementItem(BaseModel):
+    id: str
+    title: str
+    message: str
+    type: str
+    target: str = "All Users"
+    time: str
+

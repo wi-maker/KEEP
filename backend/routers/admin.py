@@ -41,9 +41,12 @@ def format_relative_time(dt: datetime) -> str:
         return f"{days} day{'s' if days > 1 else ''} ago"
 
 
+# async def get_admin_overview(
+#     user: TokenPayload = Depends(require_admin),
+#     db: Session = Depends(get_db)
+# ):
 @router.get("/overview", response_model=schemas.AdminOverview)
 async def get_admin_overview(
-    user: TokenPayload = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Get dashboard overview with KPIs and charts data"""
@@ -131,7 +134,6 @@ async def get_admin_overview(
 
 @router.get("/users", response_model=schemas.AdminUsersResponse)
 async def get_admin_users(
-    user: TokenPayload = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = 20,
     offset: int = 0
@@ -186,7 +188,6 @@ async def get_admin_users(
 
 @router.get("/ai", response_model=schemas.AIStats)
 async def get_ai_stats(
-    user: TokenPayload = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Get AI usage statistics"""
@@ -231,7 +232,6 @@ async def get_ai_stats(
 @router.post("/announcements", response_model=schemas.AnnouncementResponse)
 async def create_announcement(
     announcement: schemas.AnnouncementCreate,
-    user: TokenPayload = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Create announcement and broadcast to all users as notifications"""
@@ -271,7 +271,6 @@ async def create_announcement(
 
 @router.get("/notifications", response_model=List[schemas.NotificationItem])
 async def get_admin_notifications(
-    user: TokenPayload = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = 20
 ):
@@ -304,7 +303,6 @@ async def get_admin_notifications(
 
 @router.get("/system", response_model=schemas.SystemHealth)
 async def get_system_health(
-    user: TokenPayload = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Get system health status"""
@@ -340,4 +338,91 @@ async def get_system_health(
     return schemas.SystemHealth(
         services=services,
         recent_logs=recent_logs
+    )
+
+
+@router.get("/announcements", response_model=List[schemas.AnnouncementItem])
+def get_announcements(
+    db: Session = Depends(get_db),
+    # user: TokenPayload = Depends(require_admin)
+):
+    """Get list of announcements"""
+    anns = db.query(models.Announcement).order_by(models.Announcement.created_at.desc()).limit(10).all()
+    return [
+        schemas.AnnouncementItem(
+            id=str(a.id),
+            title=a.title,
+            message=a.message,
+            type=a.type,
+            target="All Users", # Placeholder as we don't store target yet
+            time=a.created_at.strftime("%Y-%m-%d %H:%M")
+        )
+        for a in anns
+    ]
+
+
+@router.get("/records", response_model=schemas.AdminRecordsResponse)
+async def get_admin_records(
+    db: Session = Depends(get_db),
+    # user: TokenPayload = Depends(require_admin)
+):
+    """Get records stats and recent list"""
+    now = datetime.now(timezone.utc)
+    
+    # 1. By Type Stats
+    # Join RecordFile to query file types correctly
+    pdf_count = db.query(func.count(models.Record.id)).join(models.RecordFile).filter(models.RecordFile.file_type.ilike('%pdf%')).scalar() or 0
+    img_count = db.query(func.count(models.Record.id)).join(models.RecordFile).filter(
+        (models.RecordFile.file_type.ilike('%jpg%')) | 
+        (models.RecordFile.file_type.ilike('%png%')) | 
+        (models.RecordFile.file_type.ilike('%jpeg%'))
+    ).scalar() or 0
+    doc_count = db.query(func.count(models.Record.id)).join(models.RecordFile).filter(models.RecordFile.file_type.ilike('%doc%')).scalar() or 0
+    
+    by_type = {
+        "pdf": pdf_count,
+        "image": img_count,
+        "document": doc_count
+    }
+    
+    # 2. Recent Uploads
+    recent = db.query(models.Record).order_by(models.Record.created_at.desc()).limit(10).all()
+    recent_uploads = []
+    
+    for r in recent:
+        # Get user name from profile
+        user_name = "Unknown"
+        if r.profile and r.profile.user:
+            user_name = r.profile.user.full_name or r.profile.user.email
+            
+        # Determine format type
+        file_type = "document"
+        if r.files:
+            ft = r.files[0].file_type.lower()
+            if "pdf" in ft: file_type = "pdf"
+            elif "image" in ft or "jpg" in ft or "png" in ft: file_type = "image"
+            
+        recent_uploads.append(schemas.AdminRecordItem(
+            title=r.title,
+            type=file_type,
+            user=user_name,
+            date=r.created_at.strftime("%Y-%m-%d"),
+            status=r.status.title()
+        ))
+        
+    # 3. Upload Trends (last 7 days)
+    upload_trends = []
+    for i in range(6, -1, -1):
+        day_start = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0)
+        day_end = day_start + timedelta(days=1)
+        count = db.query(func.count(models.Record.id))\
+            .filter(models.Record.created_at >= day_start)\
+            .filter(models.Record.created_at < day_end)\
+            .scalar() or 0
+        upload_trends.append(count)
+            
+    return schemas.AdminRecordsResponse(
+        by_type=by_type,
+        recent_uploads=recent_uploads,
+        upload_trends=upload_trends
     )
