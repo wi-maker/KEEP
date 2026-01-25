@@ -224,6 +224,7 @@ class AnnouncementCreate(BaseModel):
     title: str
     message: str
     type: str = "info"  # info, warning, feature
+    target_audience: str = "all"  # all, active, new
 
 class AnnouncementResponse(BaseModel):
     id: str
@@ -272,4 +273,5 @@ class AnnouncementItem(BaseModel):
     type: str
     target: str = "All Users"
     time: str
+
 
