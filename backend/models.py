@@ -16,11 +16,14 @@ class User(Base):
     full_name = Column(String)
     phone = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)  # Admin flag for dashboard access
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     profiles = relationship("Profile", back_populates="owner", cascade="all, delete-orphan")
     shares = relationship("Share", back_populates="creator", cascade="all, delete-orphan")
     chat_history = relationship("ChatHistory", back_populates="user", cascade="all, delete-orphan")
+    ai_logs = relationship("AILog", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
 class Profile(Base):
     __tablename__ = "profiles"
@@ -144,3 +147,51 @@ class TimelineEvent(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     profile = relationship("Profile", back_populates="timeline_events")
+
+
+class AILog(Base):
+    """Tracks AI usage for analytics and cost monitoring"""
+    __tablename__ = "ai_logs"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    
+    request_type = Column(String)  # chat, summary, analysis
+    tokens_used = Column(Integer, default=0)
+    model_used = Column(String)  # e.g., "gemini-pro", "openrouter/gemini"
+    status = Column(String, default="success")  # success, failed
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    user = relationship("User", back_populates="ai_logs")
+
+
+class Announcement(Base):
+    """Admin announcements for platform-wide notifications"""
+    __tablename__ = "announcements"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String, default="info")  # info, warning, feature
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Notification(Base):
+    """User notifications (from announcements, system alerts, etc.)"""
+    __tablename__ = "notifications"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    read = Column(Boolean, default=False)
+    type = Column(String, default="system")  # system, alert, announcement
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    user = relationship("User", back_populates="notifications")
+

@@ -183,3 +183,71 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: Optional[str] = None
+
+# --- Admin Schemas ---
+class AdminOverview(BaseModel):
+    total_users: int
+    active_users_30d: int
+    total_records: int
+    ai_requests_today: int
+    new_users_today: int
+    records_uploaded_today: int
+    user_growth: List[int] = []
+    record_uploads_daily: List[int] = []
+    recent_activity: List[dict] = []
+    system_health: dict = {}
+
+class AdminUser(BaseModel):
+    id: str
+    name: Optional[str]
+    email: str
+    records: int
+    joined: datetime
+    active: bool
+
+    class Config:
+        from_attributes = True
+
+class AdminUsersResponse(BaseModel):
+    stats: dict
+    recent_users: List[AdminUser]
+
+class AIStats(BaseModel):
+    total_requests: int
+    tokens_used: int
+    avg_response_time: float
+    failed_requests: int
+    request_trends: List[int] = []
+    token_usage: List[int] = []
+
+class AnnouncementCreate(BaseModel):
+    title: str
+    message: str
+    type: str = "info"  # info, warning, feature
+
+class AnnouncementResponse(BaseModel):
+    id: str
+    title: str
+    message: str
+    type: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class NotificationItem(BaseModel):
+    id: str
+    title: str
+    message: str
+    type: str
+    read: bool
+    time: str  # Formatted relative time
+
+    class Config:
+        from_attributes = True
+
+class SystemHealth(BaseModel):
+    services: List[dict]
+    recent_logs: List[dict]
+

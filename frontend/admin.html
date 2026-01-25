@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KEEP - Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            keep: {
+              dark: '#0F5A3C',
+              green: '#1B4D3E',
+              light: '#E6F4F1',
+              accent: '#A8D8C9',
+              text: '#1F2937',
+              muted: '#6B7280',
+              bg: '#F3F4F6'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .sidebar-link.active {
+      background-color: #E6F4F1;
+      color: #0F5A3C;
+      font-weight: 600;
+    }
+
+    .sidebar-link:hover:not(.active) {
+      background-color: #F3F4F6;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Mobile sidebar transitions */
+    #sidebar {
+      transition: transform 0.3s ease-in-out;
+    }
+
+    @media (max-width: 1023px) {
+      #sidebar.sidebar-open {
+        transform: translateX(0) !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 h-screen flex overflow-hidden">
+
+  <!-- Mobile backdrop overlay -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+
+  <!-- SIDEBAR - Collapsible on mobile -->
+  <aside id="sidebar"
+    class="w-64 bg-white border-r border-gray-200 flex flex-col fixed lg:static inset-y-0 left-0 z-50 -translate-x-full lg:translate-x-0">
+    <div class="h-16 px-6 border-b border-gray-200 flex items-center justify-between">
+      <div class="flex items-end gap-1">
+        <h1 class="text-2xl font-bold text-keep-dark" style="font-family: 'Playfair Display', serif;">keep</h1>
+        <div class="flex flex-col gap-[1px] mb-1">
+          <span class="w-1 h-1 rounded-full bg-keep-accent"></span>
+          <span class="w-1 h-1 rounded-full bg-keep-green"></span>
+          <span class="w-1 h-1 rounded-full bg-keep-dark"></span>
+        </div>
+      </div>
+      <span class="text-xs font-semibold text-gray-400">ADMIN</span>
+    </div>
+
+    <nav class="flex-1 px-4 py-6 space-y-1">
+      <a href="#overview" data-route="overview"
+        class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600">
+        <i class="fas fa-chart-line w-5 text-center"></i>
+        <span class="text-sm font-medium">Overview</span>
+      </a>
+      <a href="#users" data-route="users"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600">
+        <i class="fas fa-users w-5 text-center"></i>
+        <span class="text-sm font-medium">Users</span>
+      </a>
+      <a href="#records" data-route="records"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600">
+        <i class="fas fa-folder-open w-5 text-center"></i>
+        <span class="text-sm font-medium">Records</span>
+      </a>
+      <a href="#ai" data-route="ai" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600">
+        <i class="fas fa-robot w-5 text-center"></i>
+        <span class="text-sm font-medium">AI Usage</span>
+      </a>
+      <a href="#announcements" data-route="announcements"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600">
+        <i class="fas fa-bullhorn w-5 text-center"></i>
+        <span class="text-sm font-medium">Announcements</span>
+      </a>
+      <a href="#system" data-route="system"
+        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600">
+        <i class="fas fa-server w-5 text-center"></i>
+        <span class="text-sm font-medium">System</span>
+      </a>
+    </nav>
+
+    <div class="p-4 border-t border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-keep-dark flex items-center justify-center text-white text-sm font-bold">A
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-900">Admin</p>
+          <p class="text-xs text-gray-500">Super Admin</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <header class="h-16 flex items-center justify-between px-4 md:px-6 lg:px-8 bg-white border-b border-gray-200">
+      <div class="flex items-center gap-3">
+        <!-- Mobile menu button -->
+        <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 hover:text-gray-900 p-1">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold text-gray-900" id="page-title">Overview</h1>
+          <p class="text-xs text-gray-500 hidden sm:block" id="page-subtitle">Platform analytics and system health</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <button onclick="toggleNotifications()" class="text-gray-400 hover:text-gray-600 relative">
+            <i class="far fa-bell text-xl"></i>
+            <span id="notification-badge" class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+
+          <!-- Notification Dropdown -->
+          <div id="notification-dropdown"
+            class="hidden absolute right-0 top-10 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 class="font-bold text-gray-900">Notifications</h3>
+              <button onclick="toggleNotifications()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div id="notification-list" class="max-h-80 overflow-y-auto">
+              <!-- Dynamic content will be loaded here -->
+              <div class="p-8 text-center">
+                <i class="fas fa-bell text-gray-300 text-3xl mb-2"></i>
+                <p class="text-sm text-gray-500">Click to load notifications</p>
+              </div>
+            </div>
+            <div class="p-3 border-t border-gray-100 bg-gray-50">
+              <button onclick="markAllRead()"
+                class="text-sm text-keep-dark hover:underline w-full text-center font-medium">
+                Mark all as read
+              </button>
+            </div>
+          </div>
+        </div>
+        <button onclick="location.href='../index.html'"
+          class="text-sm text-gray-600 hover:text-keep-dark font-medium flex items-center gap-2">
+          <i class="fas fa-arrow-left"></i> Back to App
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4 md:py-6" id="main-content">
+      <!-- Content will be dynamically loaded here -->
+    </div>
+  </main>
+
+  <script>
+
+    // ============================================
+    // SIDEBAR FUNCTIONS (Mobile responsiveness)
+    // ============================================
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isOpen = sidebar.classList.contains('sidebar-open');
+
+      if (isOpen) {
+        closeSidebar();
+      } else {
+        sidebar.classList.add('sidebar-open');
+        backdrop.classList.remove('hidden');
+      }
+    }
+
+    function closeSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      sidebar.classList.remove('sidebar-open');
+      backdrop.classList.add('hidden');
+    }
+
+    // ============================================
+    // NOTIFICATION FUNCTIONS
+    // ============================================
+    function toggleNotifications() {
+      const dropdown = document.getElementById('notification-dropdown');
+      const isHidden = dropdown.classList.contains('hidden');
+      dropdown.classList.toggle('hidden');
+
+      // Load notifications when opening
+      if (isHidden) {
+        loadNotifications();
+      }
+    }
+
+    function closeNotifications() {
+      const dropdown = document.getElementById('notification-dropdown');
+      if (dropdown && !dropdown.classList.contains('hidden')) {
+        dropdown.classList.add('hidden');
+      }
+    }
+
+    // Close notification dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('notification-dropdown');
+      const bellButton = e.target.closest('[onclick*="toggleNotifications"]');
+      const dropdownElement = e.target.closest('#notification-dropdown');
+
+      // If click is not on bell button and not inside dropdown, close it
+      if (dropdown && !dropdown.classList.contains('hidden') && !bellButton && !dropdownElement) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    async function loadNotifications() {
+      const listEl = document.getElementById('notification-list');
+
+      // Show loading state
+      listEl.innerHTML = `
+        <div class="p-8 text-center">
+          <div class="animate-spin w-8 h-8 border-4 border-keep-green border-t-transparent rounded-full mx-auto mb-2"></div>
+          <p class="text-xs text-gray-500">Loading notifications...</p>
+        </div>
+      `;
+
+      const notifications = await fetchData('notifications');
+
+      // Handle error state
+      if (notifications === null) {
+        listEl.innerHTML = `
+          <div class="p-8 text-center">
+            <i class="fas fa-exclamation-circle text-red-300 text-3xl mb-2"></i>
+            <p class="text-sm text-gray-500">Failed to load notifications</p>
+            <button onclick="loadNotifications()" class="text-xs text-keep-dark hover:underline mt-2">Retry</button>
+          </div>
+        `;
+        return;
+      }
+
+      // Handle empty state
+      if (!notifications || notifications.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-8 text-center">
+            <i class="fas fa-bell-slash text-gray-300 text-3xl mb-2"></i>
+            <p class="text-sm text-gray-500">No notifications</p>
+            <p class="text-xs text-gray-400 mt-1">You're all caught up!</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Render notifications
+      listEl.innerHTML = notifications.map((n, index) => {
+        const isLast = index === notifications.length - 1;
+        const iconMap = {
+          user: 'fa-user-plus',
+          record: 'fa-file-medical',
+          ai: 'fa-robot',
+          system: 'fa-server',
+          share: 'fa-share-alt'
+        };
+        const icon = iconMap[n.type] || 'fa-bell';
+
+        return `
+          <div class="p-4 ${isLast ? '' : 'border-b border-gray-50'} hover:bg-gray-50 cursor-pointer ${n.read ? 'opacity-60' : ''}">
+            <div class="flex gap-3">
+              <div class="w-8 h-8 bg-keep-light rounded-full flex items-center justify-center flex-shrink-0">
+                <i class="fas ${icon} text-keep-dark text-sm"></i>
+              </div>
+              <div class="flex-1">
+                <p class="text-sm text-gray-900 font-medium">${n.title}</p>
+                <p class="text-xs text-gray-500">${n.message}</p>
+                <p class="text-xs text-gray-400 mt-1">${n.time}</p>
+              </div>
+              ${!n.read ? '<div class="w-2 h-2 bg-keep-dark rounded-full flex-shrink-0 mt-2"></div>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Update badge visibility
+      const unreadCount = notifications.filter(n => !n.read).length;
+      const badge = document.getElementById('notification-badge');
+      if (badge) {
+        badge.classList.toggle('hidden', unreadCount === 0);
+      }
+    }
+
+    // Mark all notifications as read and close dropdown
+    function markAllRead() {
+      const badge = document.getElementById('notification-badge');
+      if (badge) badge.classList.add('hidden');
+
+      // Visually mark all as read in the list
+      const listEl = document.getElementById('notification-list');
+      if (listEl) {
+        listEl.querySelectorAll('[class*="opacity"]').forEach(el => {
+          el.classList.add('opacity-60');
+        });
+        // Remove unread dot indicators
+        listEl.querySelectorAll('.bg-keep-dark.rounded-full.w-2.h-2').forEach(el => el.remove());
+      }
+    }
+
+    // ============================================
+    // CONFIGURATION
+    // Set USE_MOCK_DATA to false to use real API
+    // ============================================
+    const USE_MOCK_DATA = false;  // CHANGED: Use real API
+    const API_BASE_URL = 'https://keep-production-7d09.up.railway.app/api/v1';
+
+    // Supabase Configuration (same as main app)
+    const SUPABASE_URL = 'https://obrguyijeairiokbnyzv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9icmd1eWlqZWFpcmlva2JueXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMDE0NDcsImV4cCI6MjA4Mzg3NzQ0N30.0h32ecqonTVbleN-CrXe9JR6Zc6epPnsHuVTEbcR-HE';
+
+    // Initialize Supabase client
+    let supabaseClient = null;
+    try {
+      if (window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.error('Supabase Init Error:', e);
+    }
+
+    // API Endpoints Map - Update paths when backend routes change
+    const API_ENDPOINTS = {
+      overview: '/admin/overview',
+      users: '/admin/users',
+      records: '/admin/records',
+      ai: '/admin/ai',
+      announcements: '/admin/announcements',
+      notifications: '/admin/notifications',
+      system: '/admin/system'
+    };
+
+    // ============================================
+    // AUTHENTICATION HELPERS
+    // Uses Supabase session (same as main app)
+    // ============================================
+    async function getAuthToken() {
+      if (!supabaseClient) return null;
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        return session?.access_token || null;
+      } catch (e) {
+        console.error('Failed to get auth token:', e);
+        return null;
+      }
+    }
+
+    async function isAuthenticated() {
+      return !!(await getAuthToken());
+    }
+
+    function logout() {
+      if (supabaseClient) {
+        supabaseClient.auth.signOut();
+      }
+      window.location.href = 'index.html';
+    }
+
+    // Check admin access on page load
+    async function checkAdminAccess() {
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn('Not authenticated, redirecting to login...');
+        window.location.href = 'index.html';
+        return false;
+      }
+
+      // Test admin endpoint to verify admin status
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/overview`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.status === 403) {
+          alert('Access Denied: Admin privileges required.');
+          window.location.href = 'index.html';
+          return false;
+        }
+
+        if (!response.ok) {
+          throw new Error('Admin access check failed');
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Admin access check failed:', error);
+        return false;
+      }
+    }
+
+    // ============================================
+    // MOCK DATA
+    // Structured to match expected backend response schema
+    // ============================================
+    const MOCK_DATA = {
+      overview: {
+        total_users: 2847,
+        active_users_30d: 1234,
+        total_records: 8912,
+        ai_requests_today: 1847,
+        new_users_today: 27,
+        records_uploaded_today: 189,
+        user_growth: [2200, 2350, 2480, 2590, 2680, 2750, 2847],
+        record_uploads_daily: [145, 168, 152, 178, 165, 171, 189],
+        recent_activity: [
+          { type: 'user', message: 'New user registered: john@example.com', time: '2 min ago' },
+          { type: 'record', message: 'Blood test uploaded by Sarah M.', time: '5 min ago' },
+          { type: 'ai', message: 'AI analysis completed for record #8912', time: '12 min ago' },
+          { type: 'share', message: 'Medical records shared with Dr. Smith', time: '18 min ago' }
+        ],
+        system_health: {
+          api: { status: 'healthy', response_time: 120 },
+          ai: { status: 'healthy', latency: 2.3 },
+          database: { status: 'healthy', connections: 23 }
+        }
+      },
+      users: {
+        stats: {
+          new_this_month: 324,
+          engagement_rate: 43.4,
+          avg_session: 8.2
+        },
+        recent_users: [
+          { id: '1', name: 'John Doe', email: 'john@example.com', records: 5, joined: '2025-01-15', active: true },
+          { id: '2', name: 'Sarah Miller', email: 'sarah.m@example.com', records: 12, joined: '2025-01-10', active: true },
+          { id: '3', name: 'Michael Chen', email: 'm.chen@example.com', records: 3, joined: '2025-01-08', active: false },
+          { id: '4', name: 'Emily Johnson', email: 'emily.j@example.com', records: 8, joined: '2025-01-05', active: true },
+          { id: '5', name: 'David Brown', email: 'david.b@example.com', records: 15, joined: '2025-01-01', active: true }
+        ]
+      },
+      records: {
+        by_type: {
+          pdf: 5432,
+          image: 2891,
+          document: 589
+        },
+        recent_uploads: [
+          { title: 'Blood Test Results', type: 'pdf', user: 'Sarah M.', date: '2025-01-21', status: 'Analyzed' },
+          { title: 'X-Ray Scan', type: 'image', user: 'John D.', date: '2025-01-21', status: 'Processing' },
+          { title: 'Medical Report', type: 'pdf', user: 'Emily J.', date: '2025-01-20', status: 'Analyzed' },
+          { title: 'Prescription', type: 'image', user: 'Michael C.', date: '2025-01-20', status: 'Analyzed' }
+        ],
+        upload_trends: [145, 168, 152, 178, 165, 171, 189]
+      },
+      ai: {
+        total_requests: 45234,
+        tokens_used: 2800000,
+        avg_response_time: 2.3,
+        failed_requests: 23,
+        request_trends: [1200, 1350, 1280, 1420, 1390, 1510, 1847],
+        token_usage: [82000, 91000, 87000, 95000, 92000, 98000, 105000]
+      },
+      announcements: [],
+      notifications: [
+        { id: 1, type: 'user', title: 'New user registered', message: 'john@example.com just signed up', time: '2 minutes ago', read: false },
+        { id: 2, type: 'record', title: 'New record uploaded', message: 'Blood test results by Sarah M.', time: '15 minutes ago', read: false },
+        { id: 3, type: 'ai', title: 'AI analysis complete', message: 'Record #8912 processed successfully', time: '32 minutes ago', read: false },
+        { id: 4, type: 'system', title: 'System backup completed', message: 'Daily backup finished successfully', time: '1 hour ago', read: true }
+      ],
+      system: {
+        services: [
+          { name: 'API Service', status: 'healthy', uptime: 99.9, last_check: '1 min ago' },
+          { name: 'AI Service', status: 'healthy', uptime: 99.7, last_check: '1 min ago' },
+          { name: 'Database', status: 'healthy', uptime: 100, last_check: '30 sec ago' },
+          { name: 'Storage', status: 'healthy', uptime: 99.8, last_check: '2 min ago' }
+        ],
+        recent_logs: [
+          { level: 'info', message: 'User authentication successful', time: '2025-01-21 14:32:15' },
+          { level: 'info', message: 'Document processing completed', time: '2025-01-21 14:30:42' },
+          { level: 'warning', message: 'AI response time exceeded threshold', time: '2025-01-21 14:28:10' },
+          { level: 'info', message: 'Database backup completed', time: '2025-01-21 14:25:00' }
+        ]
+      }
+    };
+
+    // ============================================
+    // UI STATE HELPERS
+    // Returns HTML for loading, empty, and error states
+    // ============================================
+
+    // Loading skeleton HTML
+    function getLoadingState() {
+      return `
+        <div class="flex flex-col items-center justify-center py-20">
+          <div class="animate-spin w-12 h-12 border-4 border-keep-green border-t-transparent rounded-full mb-4"></div>
+          <p class="text-gray-500 font-medium">Loading data...</p>
+        </div>
+      `;
+    }
+
+    // Empty state HTML
+    function getEmptyState(title = 'No Data Available', message = 'There is no data to display at this time.') {
+      return `
+        <div class="flex flex-col items-center justify-center py-20">
+          <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-inbox text-gray-300 text-4xl"></i>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">${title}</h3>
+          <p class="text-gray-500 text-sm text-center max-w-md">${message}</p>
+        </div>
+      `;
+    }
+
+    // Error state HTML
+    function getErrorState(message = 'Failed to load data. Please try again.') {
+      return `
+        <div class="flex flex-col items-center justify-center py-20">
+          <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-exclamation-triangle text-red-400 text-4xl"></i>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Error Loading Data</h3>
+          <p class="text-gray-500 text-sm mb-4 text-center max-w-md">${message}</p>
+          <button onclick="location.reload()" class="px-4 py-2 bg-keep-dark text-white rounded-lg text-sm font-medium hover:bg-keep-green transition-colors">
+            <i class="fas fa-redo mr-2"></i>Retry
+          </button>
+        </div>
+      `;
+    }
+
+    async function fetchData(endpoint) {
+      try {
+        if (USE_MOCK_DATA) {
+          // Simulate network delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return MOCK_DATA[endpoint];
+        }
+
+        // Check authentication
+        const token = await getAuthToken();
+        if (!token) {
+          console.warn('No auth token found');
+          window.location.href = 'index.html';
+          return null;
+        }
+
+        // Real API call
+        const apiEndpoint = API_ENDPOINTS[endpoint] || `/admin/${endpoint}`;
+        const response = await fetch(`${API_BASE_URL}${apiEndpoint}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        // Handle 401 Unauthorized
+        if (response.status === 401) {
+          console.warn('Unauthorized - token may be expired');
+          logout();
+          return null;
+        }
+
+        // Handle 403 Forbidden (not admin)
+        if (response.status === 403) {
+          alert('Access Denied: Admin privileges required.');
+          window.location.href = 'index.html';
+          return null;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error(`Error fetching ${endpoint}:`, error);
+        return null;
+      }
+    }
+
+    // Helper for POST requests (announcements, etc.)
+    async function postData(endpoint, data) {
+      try {
+        if (USE_MOCK_DATA) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+          console.log('Mock POST:', endpoint, data);
+          return { success: true, message: 'Mock request successful' };
+        }
+
+        const token = await getAuthToken();
+        if (!token) {
+          console.warn('No auth token found');
+          logout();
+          return null;
+        }
+
+        const apiEndpoint = API_ENDPOINTS[endpoint] || `/admin/${endpoint}`;
+        const response = await fetch(`${API_BASE_URL}${apiEndpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (response.status === 401) {
+          console.warn('Unauthorized - token may be expired');
+          logout();
+          return null;
+        }
+
+        if (response.status === 403) {
+          alert('Access Denied: Admin privileges required.');
+          window.location.href = 'index.html';
+          return null;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error(`Error posting to ${endpoint}:`, error);
+        return null;
+      }
+    }
+
+    // ============================================
+    // CHART UTILITIES
+    // Manages Chart.js instances for proper cleanup
+    // ============================================
+    const chartInstances = {};
+
+    // Destroys existing chart before creating new one (prevents memory leaks)
+    function resetChart(id) {
+      if (chartInstances[id]) {
+        chartInstances[id].destroy();
+        delete chartInstances[id];
+      }
+    }
+
+    // ============================================
+    // ROUTING
+    // Maps hash routes to render functions
+    // ============================================
+    const routes = {
+      overview: renderOverview,
+      users: renderUsers,
+      records: renderRecords,
+      ai: renderAI,
+      announcements: renderAnnouncements,
+      system: renderSystem
+    };
+
+    function navigate(route) {
+      // Close notification dropdown when navigating
+      closeNotifications();
+
+      // Close sidebar on mobile
+      closeSidebar();
+
+      const links = document.querySelectorAll('.sidebar-link');
+      links.forEach(link => {
+        link.classList.toggle('active', link.dataset.route === route);
+      });
+
+      const titles = {
+        overview: { title: 'Overview', subtitle: 'Platform analytics and system health' },
+        users: { title: 'Users', subtitle: 'User analytics and management' },
+        records: { title: 'Records', subtitle: 'Document uploads and trends' },
+        ai: { title: 'AI Usage', subtitle: 'AI requests and token tracking' },
+        announcements: { title: 'Announcements', subtitle: 'Platform notifications and updates' },
+        system: { title: 'System Health', subtitle: 'Infrastructure status and logs' }
+      };
+
+      document.getElementById('page-title').textContent = titles[route].title;
+      document.getElementById('page-subtitle').textContent = titles[route].subtitle;
+
+      if (routes[route]) {
+        routes[route]();
+      }
+    }
+
+    window.addEventListener('hashchange', () => {
+      const route = location.hash.slice(1) || 'overview';
+      navigate(route);
+    });
+
+    // ============================================
+    // RENDER FUNCTIONS
+    // ============================================
+    async function renderOverview() {
+      // Show loading state first
+      document.getElementById('main-content').innerHTML = getLoadingState();
+
+      const data = await fetchData('overview');
+
+      // Handle error state
+      if (!data) {
+        document.getElementById('main-content').innerHTML = getErrorState('Could not load overview data. Please check your connection.');
+        return;
+      }
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-users text-keep-dark text-xl"></i>
+              </div>
+              <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+12.5%</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-900">${data.total_users.toLocaleString()}</h3>
+            <p class="text-sm text-gray-500 mt-1">Total Users</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-user-check text-keep-dark text-xl"></i>
+              </div>
+              <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+8.2%</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-900">${data.active_users_30d.toLocaleString()}</h3>
+            <p class="text-sm text-gray-500 mt-1">Active Users (30d)</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-folder text-keep-dark text-xl"></i>
+              </div>
+              <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+15.3%</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-900">${data.total_records.toLocaleString()}</h3>
+            <p class="text-sm text-gray-500 mt-1">Total Records</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-robot text-keep-dark text-xl"></i>
+              </div>
+              <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+23.1%</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-900">${data.ai_requests_today.toLocaleString()}</h3>
+            <p class="text-sm text-gray-500 mt-1">AI Requests Today</p>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">User Growth</h3>
+            <div style="height: 250px;">
+              <canvas id="userGrowthChart"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Daily Record Uploads</h3>
+            <div style="height: 250px;">
+              <canvas id="recordsChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity & System Health -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
+            <div class="space-y-3">
+              ${data.recent_activity.map(activity => `
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <i class="fas fa-${getActivityIcon(activity.type)} text-gray-400 mt-1"></i>
+                  <div class="flex-1">
+                    <p class="text-sm text-gray-900">${activity.message}</p>
+                    <p class="text-xs text-gray-500 mt-1">${activity.time}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">System Health</h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-server text-gray-400"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">API Service</p>
+                    <p class="text-xs text-gray-500">Response time: ${data.system_health.api.response_time}ms</p>
+                  </div>
+                </div>
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Healthy</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-robot text-gray-400"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">AI Service</p>
+                    <p class="text-xs text-gray-500">Avg latency: ${data.system_health.ai.latency}s</p>
+                  </div>
+                </div>
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Healthy</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-database text-gray-400"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">Database</p>
+                    <p class="text-xs text-gray-500">Connections: ${data.system_health.database.connections}/100</p>
+                  </div>
+                </div>
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Healthy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Render charts
+      renderUserGrowthChart(data.user_growth);
+      renderRecordUploadsChart(data.record_uploads_daily);
+    }
+
+    async function renderUsers() {
+      // Show loading state first
+      document.getElementById('main-content').innerHTML = getLoadingState();
+
+      const data = await fetchData('users');
+      const overviewData = await fetchData('overview');
+
+      // Handle error state
+      if (!data) {
+        document.getElementById('main-content').innerHTML = getErrorState('Could not load user data. Please check your connection.');
+        return;
+      }
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- User Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-users text-keep-dark text-xl"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-gray-900">${overviewData ? overviewData.total_users.toLocaleString() : '--'}</p>
+                <p class="text-sm text-gray-500">Total Users</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-user-check text-keep-dark text-xl"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-gray-900">${overviewData ? overviewData.active_users_30d.toLocaleString() : '--'}</p>
+                <p class="text-sm text-gray-500">Active Users</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-user-plus text-keep-dark text-xl"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-gray-900">${data.stats.new_this_month}</p>
+                <p class="text-sm text-gray-500">New This Month</p>
+              </div>
+            </div>
+          </div>
+
+          
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-clock text-keep-dark text-xl"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-gray-900">${data.stats.avg_session} min</p>
+                <p class="text-sm text-gray-500">Avg Session</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-chart-line text-keep-dark text-xl"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-gray-900">${data.stats.engagement_rate}%</p>
+                <p class="text-sm text-gray-500">Engagement Rate</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User List -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Recent Users</h3>
+            <input type="search" placeholder="Search users..." class="px-4 py-2 border border-gray-200 rounded-lg text-sm">
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Records</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${data.recent_users.map(user => `
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-keep-accent flex items-center justify-center text-xs font-bold text-keep-dark">
+                          ${user.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <span class="font-medium text-gray-900">${user.name}</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${user.email}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${user.records}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${user.joined}</td>
+                    <td class="px-6 py-4">
+                      <span class="px-2 py-1 text-xs font-medium rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+                        ${user.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderRecords() {
+      // Show loading state first
+      document.getElementById('main-content').innerHTML = getLoadingState();
+
+      const data = await fetchData('records');
+
+      // Handle error/empty state
+      if (!data) {
+        document.getElementById('main-content').innerHTML = getErrorState('Could not load records data. Please check your connection.');
+        return;
+      }
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- Record Type Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-keep-light rounded-xl flex items-center justify-center">
+                <i class="fas fa-database text-keep-dark text-xl"></i>
+              </div>
+              <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">Total</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-900">${(data.by_type.pdf + data.by_type.image + data.by_type.document).toLocaleString()}</h3>
+            <p class="text-sm text-gray-500 mt-1">Total Records</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-file-pdf text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${data.by_type.pdf.toLocaleString()}</p>
+            <p class="text-sm text-gray-500">PDF Documents</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-image text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${data.by_type.image.toLocaleString()}</p>
+            <p class="text-sm text-gray-500">Images</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-file-word text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${data.by_type.document.toLocaleString()}</p>
+            <p class="text-sm text-gray-500">Documents</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-chart-pie text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">3.1</p>
+            <p class="text-sm text-gray-500">Avg per User</p>
+          </div>
+        </div>
+
+        <!-- Upload Trends Chart -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Upload Trends (Last 7 Days)</h3>
+          <div style="height: 250px;">
+            <canvas id="uploadTrendsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Recent Uploads -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-6 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900">Recent Uploads</h3>
+          </div>
+          <div class="divide-y divide-gray-100">
+            ${data.recent_uploads.map(upload => `
+              <div class="px-6 py-4 hover:bg-gray-50">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg ${upload.type === 'pdf' ? 'bg-keep-light' : 'bg-keep-light'} flex items-center justify-center">
+                      <i class="fas fa-${upload.type === 'pdf' ? 'file-pdf text-keep-dark' : 'image text-keep-dark'}"></i>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">${upload.title}</p>
+                      <p class="text-sm text-gray-500">${upload.user} • ${upload.date}</p>
+                    </div>
+                  </div>
+                  <span class="px-2 py-1 text-xs font-medium rounded-full ${upload.status === 'Analyzed' ? 'bg-green-100 text-green-700' : 'bg-keep-light text-keep-dark'}">
+                    ${upload.status}
+                  </span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      renderUploadTrendsChart(data.upload_trends);
+    }
+
+    async function renderAI() {
+      // Show loading state first
+      document.getElementById('main-content').innerHTML = getLoadingState();
+
+      const data = await fetchData('ai');
+
+      // Handle error/empty state
+      if (!data) {
+        document.getElementById('main-content').innerHTML = getErrorState('Could not load AI usage data. Please check your connection.');
+        return;
+      }
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- AI Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-comment-dots text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${data.total_requests.toLocaleString()}</p>
+            <p class="text-sm text-gray-500">Total Requests</p>
+            <p class="text-xs text-green-600 mt-2">+23% this month</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-coins text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${(data.tokens_used / 1000000).toFixed(1)}M</p>
+            <p class="text-sm text-gray-500">Tokens Used</p>
+            <p class="text-xs text-gray-500 mt-2">~${(data.tokens_used * 0.000015).toFixed(2)} cost</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-tachometer-alt text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${data.avg_response_time}s</p>
+            <p class="text-sm text-gray-500">Avg Response</p>
+            <p class="text-xs text-green-600 mt-2">-0.4s faster</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="w-10 h-10 bg-keep-light rounded-lg flex items-center justify-center mb-3">
+              <i class="fas fa-exclamation-triangle text-keep-dark"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">${data.failed_requests}</p>
+            <p class="text-sm text-gray-500">Failed Requests</p>
+            <p class="text-xs text-keep-dark mt-2">${((data.failed_requests / data.total_requests) * 100).toFixed(2)}% error rate</p>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">AI Request Trends</h3>
+            <div style="height: 250px;">
+              <canvas id="aiRequestsChart"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Token Usage</h3>
+            <div style="height: 250px;">
+              <canvas id="tokenUsageChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Provider Status -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">AI Provider Status</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-robot text-keep-dark text-xl"></i>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">OpenRouter (Primary)</p>
+                  <p class="text-xs text-gray-500">Model: google/gemini-2.0-flash-001</p>
+                </div>
+              </div>
+              <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Active</span>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-robot text-keep-dark text-xl"></i>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Google Gemini (Fallback)</p>
+                  <p class="text-xs text-gray-500">Model: gemini-2.0-flash-001</p>
+                </div>
+              </div>
+              <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">Standby</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      renderAIRequestsChart(data.request_trends);
+      renderTokenUsageChart(data.token_usage);
+    }
+
+    async function renderAnnouncements() {
+      // Show loading state first
+      document.getElementById('main-content').innerHTML = getLoadingState();
+
+      const data = await fetchData('announcements');
+
+      // Handle error state (null means API error, empty array is valid)
+      if (data === null) {
+        document.getElementById('main-content').innerHTML = getErrorState('Could not load announcements. Please check your connection.');
+        return;
+      }
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- Create Announcement Form -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Create Announcement</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+              <input type="text" id="announcement-title" placeholder="e.g., Platform Maintenance" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-keep-green">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+              <textarea id="announcement-message" rows="4" placeholder="Enter announcement details..." class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-keep-green"></textarea>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <select id="announcement-type" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-keep-green">
+                  <option value="info">Information</option>
+                  <option value="warning">Warning</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="feature">New Feature</option>
+                </select>
+              </div>
+              <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Target</label>
+                <select id="announcement-target" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-keep-green">
+                  <option value="all">All Users</option>
+                  <option value="active">Active Users Only</option>
+                  <option value="new">New Users</option>
+                </select>
+              </div>
+            </div>
+            <button onclick="createAnnouncement()" class="w-full bg-keep-dark hover:bg-keep-green text-white font-semibold py-3 rounded-lg transition-colors">
+              <i class="fas fa-paper-plane mr-2"></i>Send Announcement
+            </button>
+          </div>
+        </div>
+
+        <!-- Announcement History -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-6 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900">Announcement History</h3>
+          </div>
+          <div class="p-8 text-center" id="announcements-list">
+            <i class="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
+            <p class="text-gray-500">No announcements sent yet</p>
+            <p class="text-sm text-gray-400 mt-2">Create your first announcement to notify users</p>
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderSystem() {
+      // Show loading state first
+      document.getElementById('main-content').innerHTML = getLoadingState();
+
+      const data = await fetchData('system');
+
+      // Handle error/empty state
+      if (!data) {
+        document.getElementById('main-content').innerHTML = getErrorState('Could not load system data. Please check your connection.');
+        return;
+      }
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- Service Status -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Service Status</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${data.services.map(service => `
+              <div class="p-4 border border-gray-100 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-medium text-gray-900">${service.name}</h4>
+                  <span class="px-2 py-1 text-xs font-bold rounded-full ${service.status === 'healthy' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                    ${service.status === 'healthy' ? 'Healthy' : 'Down'}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-500">Uptime: ${service.uptime}%</span>
+                  <span class="text-gray-400 text-xs">${service.last_check}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- System Logs -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Recent Logs</h3>
+            <button class="text-sm text-keep-dark hover:text-keep-green font-medium">
+              <i class="fas fa-download mr-2"></i>Export Logs
+            </button>
+          </div>
+          <div class="divide-y divide-gray-100">
+            ${data.recent_logs.map(log => `
+              <div class="px-6 py-4 hover:bg-gray-50">
+                <div class="flex items-start gap-4">
+                  <span class="px-2 py-1 text-xs font-bold rounded-full ${log.level === 'info' ? 'bg-blue-100 text-blue-700' :
+          log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+            'bg-red-100 text-red-700'
+        }">
+                    ${log.level.toUpperCase()}
+                  </span>
+                  <div class="flex-1">
+                    <p class="text-sm text-gray-900">${log.message}</p>
+                    <p class="text-xs text-gray-500 mt-1">${log.time}</p>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // ============================================
+    // CHART RENDERING FUNCTIONS
+    // ============================================
+    function renderUserGrowthChart(data) {
+      const ctx = document.getElementById('userGrowthChart');
+      if (!ctx) return;
+
+      resetChart('userGrowthChart');
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Users',
+            data: data,
+            borderColor: '#0F5A3C',
+            backgroundColor: '#A8D8C9',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: false, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderRecordUploadsChart(data) {
+      const ctx = document.getElementById('recordsChart');
+      if (!ctx) return;
+
+      resetChart('recordsChart');
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Uploads',
+            data: data,
+            backgroundColor: '#A8D8C9',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderUploadTrendsChart(data) {
+      const ctx = document.getElementById('uploadTrendsChart');
+      if (!ctx) return;
+
+      resetChart('uploadTrendsChart');
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Uploads',
+            data: data,
+            borderColor: '#0F5A3C',
+            backgroundColor: '#A8D8C9',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderAIRequestsChart(data) {
+      const ctx = document.getElementById('aiRequestsChart');
+      if (!ctx) return;
+
+      resetChart('aiRequestsChart');
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Requests',
+            data: data,
+            borderColor: '#0F5A3C',
+            backgroundColor: '#A8D8C9',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderTokenUsageChart(data) {
+      const ctx = document.getElementById('tokenUsageChart');
+      if (!ctx) return;
+
+      resetChart('tokenUsageChart');
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Tokens',
+            data: data,
+            backgroundColor: '#A8D8C9',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getActivityIcon(type) {
+      const icons = {
+        user: 'user-plus',
+        record: 'file-medical',
+        ai: 'robot',
+        share: 'share-alt'
+      };
+      return icons[type] || 'info-circle';
+    }
+
+    function createAnnouncement() {
+      const title = document.getElementById('announcement-title').value;
+      const message = document.getElementById('announcement-message').value;
+      const type = document.getElementById('announcement-type').value;
+      const target = document.getElementById('announcement-target').value;
+
+      if (!title || !message) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      // In production, this would call: POST /api/v1/admin/announcements
+      console.log('Creating announcement:', { title, message, type, target });
+
+      // Show success message
+      alert('Announcement sent successfully!');
+
+      // Clear form
+      document.getElementById('announcement-title').value = '';
+      document.getElementById('announcement-message').value = '';
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+      const route = location.hash.slice(1) || 'overview';
+      navigate(route);
+
+      // Setup sidebar click handlers
+      document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const route = link.dataset.route;
+          location.hash = route;
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

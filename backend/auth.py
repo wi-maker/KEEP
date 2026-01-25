@@ -176,3 +176,35 @@ async def get_current_user_id(
 ) -> str:
     """Get current authenticated user's ID."""
     return user.user_id
+
+
+# Admin verification dependency (requires db session)
+def get_current_admin(db_dependency):
+    """
+    Factory function to create admin dependency.
+    
+    Usage in router:
+        from db import get_db
+        get_admin = get_current_admin(get_db)
+        
+        @router.get("/admin/endpoint")
+        async def admin_endpoint(user: TokenPayload = Depends(get_admin)):
+            ...
+    """
+    async def verify_admin(
+        user: TokenPayload = Depends(verify_token),
+        db = Depends(db_dependency)
+    ) -> TokenPayload:
+        """Verify current user is an admin. Raises 403 if not."""
+        from models import User
+        
+        db_user = db.query(User).filter_by(id=user.user_id).first()
+        if not db_user or not db_user.is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Admin privileges required"
+            )
+        return user
+    
+    return verify_admin
+

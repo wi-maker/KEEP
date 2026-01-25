@@ -11,10 +11,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import shutil
 import os
+import io
 import uuid
 import json
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from urllib.parse import unquote, urlparse
 
 import models
 import schemas
@@ -23,7 +25,8 @@ from rag_pipeline import process_record, chat_with_rag
 from config import settings
 from utils import get_file_extension, sanitize_filename, get_file_size
 from auth import verify_token, TokenPayload, get_current_user_id
-from storage import upload_file_to_supabase
+from storage import upload_file_to_supabase, download_file_from_supabase
+from routers import admin as admin_router
 
 # Create tables
 models.Base.metadata.create_all(bind=db.engine)
@@ -47,6 +50,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include admin router
+app.include_router(admin_router.router, prefix=settings.API_V1_STR)
 
 # Dependency
 def get_db():
@@ -434,8 +440,8 @@ def get_file(
     db: Session = Depends(get_db)
 ):
     """
-    Get record file - Redirects to the Supabase Cloud URL.
-    This fixes the issue where the app looked for a local file that didn't exist.
+    Get record file - Streams file content directly from backend.
+    Hides the underlying Supabase storage URL from users.
     """
     record = db.query(models.Record).filter_by(id=record_id).first()
     
@@ -444,11 +450,51 @@ def get_file(
         raise HTTPException(status_code=404, detail="File record not found")
     
     file_record = record.files[0]
-
-    # 2. Redirect to the cloud URL
-    # Your upload function saves the Supabase Public URL into 'file_path',
-    # so we can just send the user there directly.
-    return RedirectResponse(url=file_record.file_path)
+    stored_url = file_record.file_path
+    
+    # 2. Extract relative storage path from the full Supabase URL
+    # URL format: https://{project}.supabase.co/storage/v1/object/public/records/{user_id}/{record_id}/{filename}
+    parsed = urlparse(stored_url)
+    path_parts = parsed.path.split('/object/public/records/')
+    
+    if len(path_parts) < 2:
+        raise HTTPException(status_code=500, detail="Invalid storage path format")
+    
+    # Decode URL-encoded characters (e.g., %20 -> space)
+    relative_path = unquote(path_parts[1])
+    
+    # 3. Download file from Supabase
+    file_bytes = download_file_from_supabase(relative_path)
+    
+    if file_bytes is None:
+        raise HTTPException(status_code=404, detail="File not found in storage")
+    
+    # 4. Determine media type based on file extension
+    extension = file_record.file_type.lower() if file_record.file_type else ''
+    media_type_map = {
+        'pdf': 'application/pdf',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'txt': 'text/plain',
+    }
+    media_type = media_type_map.get(extension, 'application/octet-stream')
+    
+    # 5. Set Content-Disposition header
+    disposition = 'inline' if inline else 'attachment'
+    filename = file_record.original_filename or f"file.{extension}"
+    
+    return StreamingResponse(
+        io.BytesIO(file_bytes),
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"'
+        }
+    )
 
 @app.put(f"{settings.API_V1_STR}/records/{{record_id}}", response_model=schemas.Record)
 def update_record(
@@ -708,7 +754,7 @@ def create_share(
     token = str(uuid.uuid4())
     
     # Calculate expiry
-    expires_at = datetime.now() + timedelta(hours=share_data.expiry_hours)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=share_data.expiry_hours)
     
     # Create share
     db_share = models.Share(
@@ -809,7 +855,7 @@ def get_public_share_data(token: str, db: Session = Depends(get_db)):
     if share.status == "revoked":
         raise HTTPException(status_code=403, detail="Share link has been revoked")
     
-    if share.expires_at < datetime.now():
+    if share.expires_at < datetime.now(timezone.utc):
         # Update status to expired
         share.status = "expired"
         db.commit()
@@ -864,6 +910,108 @@ def get_timeline(
         {"date": date, "events": events}
         for date, events in grouped.items()
     ]
+
+# ============================================================================
+# USER NOTIFICATIONS ROUTES
+# ============================================================================
+
+def format_relative_time(dt: datetime) -> str:
+    """Format datetime as relative time string"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    now = datetime.now(timezone.utc)
+    diff = now - dt
+    
+    if diff.total_seconds() < 60:
+        return "Just now"
+    elif diff.total_seconds() < 3600:
+        mins = int(diff.total_seconds() / 60)
+        return f"{mins} min{'s' if mins > 1 else ''} ago"
+    elif diff.total_seconds() < 86400:
+        hours = int(diff.total_seconds() / 3600)
+        return f"{hours} hour{'s' if hours > 1 else ''} ago"
+    else:
+        days = diff.days
+        return f"{days} day{'s' if days > 1 else ''} ago"
+
+
+@app.get(f"{settings.API_V1_STR}/notifications", response_model=List[schemas.NotificationItem])
+def get_user_notifications(
+    user: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db),
+    limit: int = 20
+):
+    """Get notifications for the current user (for bell icon)"""
+    notifications = db.query(models.Notification)\
+        .filter(models.Notification.user_id == user.user_id)\
+        .order_by(models.Notification.created_at.desc())\
+        .limit(limit)\
+        .all()
+    
+    return [
+        schemas.NotificationItem(
+            id=n.id,
+            title=n.title,
+            message=n.message,
+            type=n.type,
+            read=n.read,
+            time=format_relative_time(n.created_at)
+        )
+        for n in notifications
+    ]
+
+
+@app.get(f"{settings.API_V1_STR}/notifications/unread-count")
+def get_unread_count(
+    user: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """Get count of unread notifications for badge"""
+    from sqlalchemy import func as sqlfunc
+    count = db.query(sqlfunc.count(models.Notification.id))\
+        .filter(models.Notification.user_id == user.user_id)\
+        .filter(models.Notification.read == False)\
+        .scalar() or 0
+    
+    return {"unread_count": count}
+
+
+@app.patch(f"{settings.API_V1_STR}/notifications/{{notification_id}}/read")
+def mark_notification_read(
+    notification_id: str,
+    user: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """Mark a notification as read"""
+    notification = db.query(models.Notification)\
+        .filter(models.Notification.id == notification_id)\
+        .filter(models.Notification.user_id == user.user_id)\
+        .first()
+    
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    notification.read = True
+    db.commit()
+    
+    return {"message": "Notification marked as read"}
+
+
+@app.patch(f"{settings.API_V1_STR}/notifications/read-all")
+def mark_all_notifications_read(
+    user: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """Mark all notifications as read for the current user"""
+    db.query(models.Notification)\
+        .filter(models.Notification.user_id == user.user_id)\
+        .filter(models.Notification.read == False)\
+        .update({"read": True})
+    db.commit()
+    
+    return {"message": "All notifications marked as read"}
+
 
 # ============================================================================
 # HEALTH CHECK

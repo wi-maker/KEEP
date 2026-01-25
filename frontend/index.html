@@ -2712,7 +2712,7 @@
                     <p class="text-sm text-gray-500">${r.record_date ? new Date(r.record_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'}</p>
                   </div>
                   ${r.files && r.files.length > 0 ? `
-                  <a href="${API_BASE_URL}/api/v1/records/${r.id}/file" target="_blank" 
+                  <a href="${API_BASE_URL}/api/v1/records/${r.id}/file?inline=true" target="_blank" 
                      class="px-4 py-2 bg-keep-light hover:bg-keep-accent/30 text-keep-dark font-medium rounded-lg text-sm transition-colors">
                     <i class="far fa-eye mr-2"></i>View
                   </a>

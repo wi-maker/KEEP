@@ -607,7 +607,24 @@ INSTRUCTIONS:
 
         response_text = self.ai_client.generate_content(prompt)
         
-        # 7. Extract sources
+        # 7a. Log AI usage for analytics (non-blocking)
+        try:
+            # Estimate tokens (rough approximation: 1 token ~ 4 characters)
+            estimated_tokens = (len(prompt) + len(response_text)) // 4
+            
+            ai_log = models.AILog(
+                user_id=user_id,
+                request_type="chat",
+                tokens_used=estimated_tokens,
+                model_used="openrouter/gemini",
+                status="success"
+            )
+            self.db.add(ai_log)
+            self.db.commit()
+        except Exception as log_error:
+            logger.warning(f"AI usage logging failed (non-blocking): {log_error}")
+        
+        # 8. Extract sources
         sources = []
         
         # Add user document sources
