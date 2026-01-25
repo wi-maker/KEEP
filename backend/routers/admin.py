@@ -392,8 +392,8 @@ async def get_admin_records(
     for r in recent:
         # Get user name from profile
         user_name = "Unknown"
-        if r.profile and r.profile.user:
-            user_name = r.profile.user.full_name or r.profile.user.email
+        if r.profile and r.profile.owner:
+            user_name = r.profile.owner.full_name or r.profile.owner.email
             
         # Determine format type
         file_type = "document"
@@ -426,3 +426,4 @@ async def get_admin_records(
         recent_uploads=recent_uploads,
         upload_trends=upload_trends
     )
+
