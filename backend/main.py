@@ -44,8 +44,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",          # Local development
-        "https://keep-ten-pi.vercel.app/", # <-- REPLACE THIS with your actual Vercel URL
-        "*"                               # Keep "*" only if you want to allow ANY website to connect (less secure)
+        "https://keep-ten-pi.vercel.app/",
+        "https://keep-admin.vercel.app/",
+        "https://app.onkeep.co/", # <-- REPLACE THIS with your actual Vercel URL                             # Keep "*" only if you want to allow ANY website to connect (less secure)
     ],
     allow_credentials=True,
     allow_methods=["*"],
