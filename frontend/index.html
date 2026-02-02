@@ -1435,10 +1435,9 @@
         checkLoginAnnouncement();
 
         // 4. First-Time User Welcome Modal
-        // Check explicitly for false (not just falsy) to handle undefined/null from DB
-        const hasSeenModal = currentUser?.has_seen_welcome_modal;
-        console.log('[KEEP] Checking welcome modal - hasSeenModal:', hasSeenModal);
-        if (currentUser && hasSeenModal === false) {
+        // Check if user exists and has NOT seen the modal (handles false, null, or undefined)
+        console.log('[KEEP] Checking welcome modal - has_seen_welcome_modal:', currentUser?.has_seen_welcome_modal);
+        if (currentUser && !currentUser.has_seen_welcome_modal) {
           const userName = currentUser.full_name?.split(' ')[0] || 'there';
           console.log('[KEEP] Showing welcome modal for:', userName);
           setTimeout(() => showWelcomeModal(userName), 800); // Slight delay for smooth UX
