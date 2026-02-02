@@ -1364,8 +1364,10 @@
 
       // Show modal with flex display for centering
       modal.style.display = 'flex';
+      modal.style.zIndex = '9999'; // Force it on top of everything
+      modal.style.opacity = '1';
       document.body.style.overflow = 'hidden'; // Prevent background scroll
-      console.log('[KEEP] Welcome modal displayed successfully');
+      console.log('[KEEP] Welcome modal displayed successfully with z-9999');
     }
 
     async function dismissWelcomeModal() {
@@ -1450,12 +1452,23 @@
         checkLoginAnnouncement();
 
         // 4. First-Time User Welcome Modal
-        // Check if user exists and has NOT seen the modal (handles false, null, or undefined)
-        console.log('[KEEP] Checking welcome modal - has_seen_welcome_modal:', currentUser?.has_seen_welcome_modal);
-        if (currentUser && !currentUser.has_seen_welcome_modal) {
-          const userName = currentUser.full_name?.split(' ')[0] || 'there';
-          console.log('[KEEP] Showing welcome modal for:', userName);
-          setTimeout(() => showWelcomeModal(userName), 800); // Slight delay for smooth UX
+        console.log('[KEEP] Full currentUser object:', currentUser);
+        console.log('[KEEP] has_seen_welcome_modal value:', currentUser?.has_seen_welcome_modal);
+        console.log('[KEEP] Type of has_seen_welcome_modal:', typeof currentUser?.has_seen_welcome_modal);
+
+        // Explicit check against true (handles false, null, undefined as "show modal")
+        // If it's explicitly TRUE, we don't show. Otherwise we show.
+        const hasSeen = currentUser?.has_seen_welcome_modal === true;
+
+        if (!hasSeen) {
+          const userName = currentUser?.full_name?.split(' ')[0] || 'there';
+          console.warn('[KEEP] >>> TRIGGERING WELCOME MODAL for:', userName);
+
+          setTimeout(() => {
+            showWelcomeModal(userName);
+          }, 1000); // 1s delay to ensure DOM is ready and other modals are gone
+        } else {
+          console.log('[KEEP] User has already seen welcome modal. Skipping.');
         }
       } catch (error) {
         console.error("Data loading warning:", error);
