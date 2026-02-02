@@ -1397,6 +1397,8 @@
       // 1. Critical Auth Sync (happens in background)
       try {
         currentUser = await apiCall('/auth/sync', { method: 'POST' });
+        console.log('[KEEP] Auth sync response:', currentUser);
+        console.log('[KEEP] has_seen_welcome_modal:', currentUser?.has_seen_welcome_modal);
         hideLoginModal();
       } catch (error) {
         console.error("Auth sync failed:", error);
@@ -1433,8 +1435,12 @@
         checkLoginAnnouncement();
 
         // 4. First-Time User Welcome Modal
-        if (currentUser && !currentUser.has_seen_welcome_modal) {
+        // Check explicitly for false (not just falsy) to handle undefined/null from DB
+        const hasSeenModal = currentUser?.has_seen_welcome_modal;
+        console.log('[KEEP] Checking welcome modal - hasSeenModal:', hasSeenModal);
+        if (currentUser && hasSeenModal === false) {
           const userName = currentUser.full_name?.split(' ')[0] || 'there';
+          console.log('[KEEP] Showing welcome modal for:', userName);
           setTimeout(() => showWelcomeModal(userName), 800); // Slight delay for smooth UX
         }
       } catch (error) {
