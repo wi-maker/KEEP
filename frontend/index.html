@@ -1417,6 +1417,22 @@
         console.log('[KEEP] Auth sync response:', currentUser);
         console.log('[KEEP] has_seen_welcome_modal:', currentUser?.has_seen_welcome_modal);
         hideLoginModal();
+
+        // --- WELCOME MODAL CHECK (Priority) ---
+        // Moved here to ensure it runs even if data loading fails below
+        console.log('[KEEP] Checking welcome modal status:', currentUser?.has_seen_welcome_modal);
+        const hasSeen = currentUser?.has_seen_welcome_modal === true;
+
+        if (!hasSeen) {
+          const userName = currentUser?.full_name?.split(' ')[0] || 'there';
+          console.warn('[KEEP] >>> TRIGGERING WELCOME MODAL for:', userName);
+
+          setTimeout(() => {
+            showWelcomeModal(userName);
+          }, 1000);
+        } else {
+          console.log('[KEEP] User has already seen welcome modal. Skipping.');
+        }
       } catch (error) {
         console.error("Auth sync failed:", error);
         app.toast('Authentication failed. Please sign in again.');
@@ -1451,25 +1467,7 @@
         startNotificationPoller();
         checkLoginAnnouncement();
 
-        // 4. First-Time User Welcome Modal
-        console.log('[KEEP] Full currentUser object:', currentUser);
-        console.log('[KEEP] has_seen_welcome_modal value:', currentUser?.has_seen_welcome_modal);
-        console.log('[KEEP] Type of has_seen_welcome_modal:', typeof currentUser?.has_seen_welcome_modal);
 
-        // Explicit check against true (handles false, null, undefined as "show modal")
-        // If it's explicitly TRUE, we don't show. Otherwise we show.
-        const hasSeen = currentUser?.has_seen_welcome_modal === true;
-
-        if (!hasSeen) {
-          const userName = currentUser?.full_name?.split(' ')[0] || 'there';
-          console.warn('[KEEP] >>> TRIGGERING WELCOME MODAL for:', userName);
-
-          setTimeout(() => {
-            showWelcomeModal(userName);
-          }, 1000); // 1s delay to ensure DOM is ready and other modals are gone
-        } else {
-          console.log('[KEEP] User has already seen welcome modal. Skipping.');
-        }
       } catch (error) {
         console.error("Data loading warning:", error);
         app.toast('Some data failed to load. Please refresh.');
