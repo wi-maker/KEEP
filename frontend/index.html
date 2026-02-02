@@ -980,8 +980,8 @@
     Action Successful</div>
 
   <!-- WELCOME MODAL (First-Time User Onboarding) -->
-  <div id="welcome-modal"
-    class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-md">
+  <div id="welcome-modal" class="fixed inset-0 bg-black/60 z-[80] items-center justify-center p-4 backdrop-blur-md"
+    style="display: none;">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl welcome-modal-content">
       <!-- Top decorative gradient bar -->
       <div class="h-1.5 bg-gradient-to-r from-keep-green via-keep-dark to-keep-accent rounded-t-2xl"></div>
@@ -1350,15 +1350,27 @@
 
     // === WELCOME MODAL FUNCTIONS (First-Time User Onboarding) ===
     function showWelcomeModal(userName) {
+      const modal = document.getElementById('welcome-modal');
       const headerEl = document.getElementById('welcome-modal-header');
+
+      if (!modal) {
+        console.error('[KEEP] Welcome modal element not found!');
+        return;
+      }
+
       if (headerEl) {
         headerEl.innerText = `Hello ${userName}`;
       }
-      document.getElementById('welcome-modal').classList.remove('hidden');
+
+      // Show modal with flex display for centering
+      modal.style.display = 'flex';
       document.body.style.overflow = 'hidden'; // Prevent background scroll
+      console.log('[KEEP] Welcome modal displayed successfully');
     }
 
     async function dismissWelcomeModal() {
+      const modal = document.getElementById('welcome-modal');
+
       try {
         // Call backend to mark modal as seen
         await apiCall('/users/welcome-modal', { method: 'PATCH' });
@@ -1367,13 +1379,16 @@
         if (currentUser) {
           currentUser.has_seen_welcome_modal = true;
         }
+        console.log('[KEEP] Welcome modal dismissed and saved to backend');
       } catch (error) {
         console.warn('Failed to save modal dismissal:', error);
         // Continue anyway - UX should not be blocked by this
       }
 
       // Hide modal
-      document.getElementById('welcome-modal').classList.add('hidden');
+      if (modal) {
+        modal.style.display = 'none';
+      }
       document.body.style.overflow = ''; // Restore scroll
     }
 
