@@ -255,6 +255,22 @@ def delete_current_user_account(
     return {"message": "Account successfully deleted"}
 
 
+@app.patch(f"{settings.API_V1_STR}/users/welcome-modal")
+def dismiss_welcome_modal(
+    user_token: TokenPayload = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """Mark welcome modal as seen for current user."""
+    user = db.query(models.User).filter_by(id=user_token.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.has_seen_welcome_modal = True
+    db.commit()
+    
+    return {"status": "success", "message": "Welcome modal dismissed"}
+
+
 # ============================================================================
 # PROFILE ROUTES
 # ============================================================================

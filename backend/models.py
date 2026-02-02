@@ -17,6 +17,7 @@ class User(Base):
     phone = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)  # Admin flag for dashboard access
+    has_seen_welcome_modal = Column(Boolean, default=False)  # First-time user onboarding
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     profiles = relationship("Profile", back_populates="owner", cascade="all, delete-orphan")

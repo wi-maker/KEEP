@@ -14,6 +14,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: str
     is_active: bool
+    has_seen_welcome_modal: bool = False
     created_at: datetime
 
     class Config:
