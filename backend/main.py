@@ -122,12 +122,30 @@ def sync_user(
             db.add(default_profile)
             db.commit()
             
-            # Fire welcome email (non-blocking)
-            from email_service import email_service
-            first_name = full_name.split()[0] if full_name else "there"
-            asyncio.ensure_future(
-                email_service.send_welcome_email(email, first_name)
-            )
+            # Fire welcome email (non-blocking background thread)
+            import threading
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def _send_welcome():
+                try:
+                    from email_service import email_service
+                    first_name = full_name.split()[0] if full_name else "there"
+                    # Use a fresh event loop in this thread
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    result = loop.run_until_complete(
+                        email_service.send_welcome_email(email, first_name)
+                    )
+                    loop.close()
+                    if result:
+                        logger.info(f"Welcome email sent to {email}")
+                    else:
+                        logger.warning(f"Welcome email NOT sent to {email} — check SMTP config")
+                except Exception as exc:
+                    logger.error(f"Welcome email thread error for {email}: {exc}")
+
+            threading.Thread(target=_send_welcome, daemon=True).start()
             
         except Exception as e:
             db.rollback()
