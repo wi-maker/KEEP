@@ -49,6 +49,15 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days
     
+    # Email / SMTP (Welcome email on signup)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "onkeep.co")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "465"))
+    SMTP_USERNAME: str = os.getenv("SMTP_USERNAME", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "main@onkeep.co")
+    SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "KEEP")
+    SMTP_USE_SSL: bool = os.getenv("SMTP_USE_SSL", "true").lower() == "true"
+
     # RAG Settings
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200

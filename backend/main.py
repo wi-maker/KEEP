@@ -122,6 +122,13 @@ def sync_user(
             db.add(default_profile)
             db.commit()
             
+            # Fire welcome email (non-blocking)
+            from email_service import email_service
+            first_name = full_name.split()[0] if full_name else "there"
+            asyncio.ensure_future(
+                email_service.send_welcome_email(email, first_name)
+            )
+            
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
