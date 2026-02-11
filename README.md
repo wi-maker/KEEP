@@ -71,20 +71,20 @@
 
 ```mermaid
 graph TD
-    User[User] -->|Browser| Frontend[Frontend (HTML/JS)]
-    Frontend -->|Auth (JWT)| Supabase[Supabase Auth]
-    Frontend -->|API Requests| Backend[FastAPI Backend]
-    
-    subgraph Backend Services
-        Backend -->|Store Metadata| PG[(PostgreSQL)]
-        Backend -->|Vector Search| Chroma[(ChromaDB)]
-        Backend -->|Generate| AI_LLM[OpenRouter/Gemini]
-        Backend -->|Embed| AI_Embed[Gemini Embeddings]
+    User["User"] -->|"Browser"| Frontend["Frontend - HTML/JS"]
+    Frontend -->|"Auth JWT"| Supabase["Supabase Auth"]
+    Frontend -->|"API Requests"| Backend["FastAPI Backend"]
+
+    subgraph Backend_Services["Backend Services"]
+        Backend -->|"Store Metadata"| PG[("PostgreSQL")]
+        Backend -->|"Vector Search"| Chroma[("ChromaDB")]
+        Backend -->|"Generate"| AI_LLM["OpenRouter / Gemini"]
+        Backend -->|"Embed"| AI_Embed["Gemini Embeddings"]
     end
-    
-    subgraph Processing Pipeline
-        Upload[File Upload] --> OCR[Tesseract/PyPDF2]
-        OCR --> Chunking[Text Chunking]
+
+    subgraph Processing_Pipeline["Processing Pipeline"]
+        Upload["File Upload"] --> OCR["Tesseract / PyPDF2"]
+        OCR --> Chunking["Text Chunking"]
         Chunking --> AI_Embed
         AI_Embed --> Chroma
     end
@@ -183,5 +183,3 @@ Once running, visit `http://localhost:8000/docs` for the interactive Swagger UI.
 ---
 
 **Built with ❤️ for a healthier future.**
-# KEEP
-# KEEP
