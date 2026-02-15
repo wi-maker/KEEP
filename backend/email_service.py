@@ -45,7 +45,7 @@ class EmailService:
             return False
 
         try:
-            subject = "Welcome to KEEP | Your health journey starts here 🛡️"
+            subject = "Welcome to KEEP"
             html_body = get_welcome_email_html(first_name)
 
             payload = {
@@ -55,10 +55,15 @@ class EmailService:
                 "html": html_body,
             }
 
+            # Set reply-to if configured (prevents 550 bounces on domains without MX records)
+            if settings.REPLY_TO_EMAIL:
+                payload["reply_to"] = settings.REPLY_TO_EMAIL
+
             headers = {
                 "Authorization": f"Bearer {settings.RESEND_API_KEY}",
                 "Content-Type": "application/json",
             }
+
 
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(RESEND_API_URL, json=payload, headers=headers)

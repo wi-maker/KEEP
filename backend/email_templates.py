@@ -32,10 +32,10 @@ def get_welcome_email_html(first_name: str) -> str:
   </noscript>
   <![endif]-->
 </head>
-<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;background-color:#f0fdf4;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
 
   <!-- Outer wrapper -->
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;">
     <tr>
       <td align="center" style="padding:40px 16px;">
 
@@ -44,7 +44,7 @@ def get_welcome_email_html(first_name: str) -> str:
 
           <!-- ============ HEADER ============ -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);padding:40px 40px 32px 40px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#0d9488 0%,#0f766e 50%,#115e59 100%);padding:40px 40px 32px 40px;text-align:center;">
               <!-- Logo -->
               <img
                 src="https://onkeep.co/logo.png"
@@ -52,7 +52,7 @@ def get_welcome_email_html(first_name: str) -> str:
                 width="120"
                 style="display:inline-block;width:120px;height:auto;"
               />
-              <p style="margin:16px 0 0 0;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;font-weight:600;">
+              <p style="margin:16px 0 0 0;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.7);font-weight:600;">
                 Your Personal Health Vault
               </p>
             </td>
@@ -61,46 +61,55 @@ def get_welcome_email_html(first_name: str) -> str:
           <!-- ============ GREETING ============ -->
           <tr>
             <td style="padding:36px 40px 8px 40px;">
-              <h1 style="margin:0;font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">
+              <p style="margin:0;font-size:16px;line-height:1.7;color:#1e293b;">
                 Hi {first_name},
+              </p>
+            </td>
+          </tr>
+
+          <!-- ============ HEADLINE ============ -->
+          <tr>
+            <td style="padding:8px 40px 8px 40px;">
+              <h1 style="margin:0;font-size:24px;font-weight:700;color:#0f766e;letter-spacing:-0.02em;">
+                Welcome to KEEP &ndash; your personal health vault.
               </h1>
             </td>
           </tr>
 
-          <!-- ============ BODY COPY ============ -->
+          <!-- ============ INTRO ============ -->
           <tr>
-            <td style="padding:8px 40px 24px 40px;">
-              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.7;color:#475569;">
-                Welcome to <strong style="color:#0f172a;">KEEP</strong>&mdash;the last place you'll ever need to store your medical history. We've built your personal health vault to ensure that your records are as mobile and accessible as you are.
+            <td style="padding:12px 40px 28px 40px;">
+              <p style="margin:0;font-size:15px;line-height:1.7;color:#475569;">
+                KEEP stores all your medical records in one secure place, so you no longer have to deal with lost results or scattered paperwork.
               </p>
             </td>
           </tr>
 
-          <!-- ============ FEATURE CARDS ============ -->
+          <!-- ============ HOW IT WORKS HEADING ============ -->
           <tr>
-            <td style="padding:0 40px;">
-              <p style="margin:0 0 16px 0;font-size:15px;font-weight:600;color:#0f172a;">
-                What can you do with KEEP?
+            <td style="padding:0 40px 16px 40px;">
+              <p style="margin:0;font-size:16px;font-weight:700;color:#0f766e;">
+                How it works:
               </p>
             </td>
           </tr>
 
-          <!-- Feature 1: Centralize -->
+          <!-- Feature 1: Upload -->
           <tr>
             <td style="padding:0 40px 12px 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;border-radius:12px;border:1px solid #d1fae5;">
                 <tr>
                   <td style="padding:20px 24px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td width="44" valign="top">
                           <div style="width:40px;height:40px;background:linear-gradient(135deg,#0d9488,#14b8a6);border-radius:10px;text-align:center;line-height:40px;font-size:18px;">
-                            &#128193;
+                            &#128196;
                           </div>
                         </td>
                         <td style="padding-left:16px;">
-                          <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#0f172a;">Centralize Your Data</p>
-                          <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Upload lab tests, prescriptions, and scans. No more lost paperwork.</p>
+                          <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#134e4a;">Upload records</p>
+                          <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Lab tests, prescriptions, scans &ndash; anything.</p>
                         </td>
                       </tr>
                     </table>
@@ -113,19 +122,19 @@ def get_welcome_email_html(first_name: str) -> str:
           <!-- Feature 2: AI Analysis -->
           <tr>
             <td style="padding:0 40px 12px 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;border-radius:12px;border:1px solid #d1fae5;">
                 <tr>
                   <td style="padding:20px 24px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td width="44" valign="top">
-                          <div style="width:40px;height:40px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:10px;text-align:center;line-height:40px;font-size:18px;">
+                          <div style="width:40px;height:40px;background:linear-gradient(135deg,#0d9488,#14b8a6);border-radius:10px;text-align:center;line-height:40px;font-size:18px;">
                             &#129504;
                           </div>
                         </td>
                         <td style="padding-left:16px;">
-                          <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#0f172a;">Understand Your Health</p>
-                          <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Our AI analyzes your records to explain complex medical jargon in plain English.</p>
+                          <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#134e4a;">Get AI analysis</p>
+                          <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Understand what your results mean.</p>
                         </td>
                       </tr>
                     </table>
@@ -138,19 +147,19 @@ def get_welcome_email_html(first_name: str) -> str:
           <!-- Feature 3: Secure Sharing -->
           <tr>
             <td style="padding:0 40px 28px 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;border-radius:12px;border:1px solid #d1fae5;">
                 <tr>
                   <td style="padding:20px 24px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td width="44" valign="top">
-                          <div style="width:40px;height:40px;background:linear-gradient(135deg,#0369a1,#38bdf8);border-radius:10px;text-align:center;line-height:40px;font-size:18px;">
+                          <div style="width:40px;height:40px;background:linear-gradient(135deg,#0d9488,#14b8a6);border-radius:10px;text-align:center;line-height:40px;font-size:18px;">
                             &#128274;
                           </div>
                         </td>
                         <td style="padding-left:16px;">
-                          <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#0f172a;">Share with Confidence</p>
-                          <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">Generate secure, time-limited links to show your doctors or family your history instantly.</p>
+                          <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#134e4a;">Share secure links</p>
+                          <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">With doctors or family when needed.</p>
                         </td>
                       </tr>
                     </table>
@@ -162,42 +171,47 @@ def get_welcome_email_html(first_name: str) -> str:
 
           <!-- ============ CTA SECTION ============ -->
           <tr>
-            <td style="padding:0 40px 12px 40px;">
-              <p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">
-                <strong style="color:#0f172a;">Take the first step:</strong> Your vault is empty! Upload your first document today to see the AI analysis in action.
+            <td style="padding:0 40px 8px 40px;">
+              <p style="margin:0;font-size:16px;font-weight:700;color:#1e293b;">
+                Ready to start?
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:12px 40px 36px 40px;text-align:center;">
+            <td style="padding:12px 40px 8px 40px;text-align:center;">
               <a href="https://app.onkeep.co/"
                  target="_blank"
                  style="display:inline-block;background:linear-gradient(135deg,#0d9488,#0f766e);color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:0.02em;box-shadow:0 4px 14px rgba(13,148,136,0.35);">
-                Upload My First Record &rarr;
+                Upload your first record &rarr;
               </a>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:8px 40px 36px 40px;text-align:center;">
+              <p style="margin:0;font-size:14px;color:#64748b;">
+                &hellip;and see how simple it is.
+              </p>
             </td>
           </tr>
 
           <!-- ============ DIVIDER ============ -->
           <tr>
             <td style="padding:0 40px;">
-              <div style="height:1px;background-color:#e2e8f0;"></div>
+              <div style="height:1px;background-color:#d1fae5;"></div>
             </td>
           </tr>
 
           <!-- ============ FOOTER ============ -->
           <tr>
             <td style="padding:28px 40px 36px 40px;text-align:center;">
-              <p style="margin:0 0 6px 0;font-size:14px;color:#475569;">
-                Stay healthy,
-              </p>
-              <p style="margin:0 0 20px 0;font-size:14px;font-weight:700;color:#0f172a;">
-                The KEEP Team
+              <p style="margin:0 0 20px 0;font-size:14px;font-weight:700;color:#0f766e;">
+                KEEP Team
               </p>
               <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.6;">
                 &copy; {_get_current_year()} KEEP Health&ensp;|&ensp;
-                <a href="https://onkeep.co" style="color:#94a3b8;text-decoration:underline;">onkeep.co</a>
+                <a href="https://onkeep.co" style="color:#0d9488;text-decoration:underline;">onkeep.co</a>
               </p>
               <p style="margin:8px 0 0 0;font-size:11px;color:#cbd5e1;">
                 You received this email because you signed up for KEEP.

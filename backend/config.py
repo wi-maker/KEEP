@@ -53,6 +53,7 @@ class Settings:
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     EMAIL_FROM_ADDRESS: str = os.getenv("EMAIL_FROM_ADDRESS", "onboarding@onkeep.co")
     EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "KEEP")
+    REPLY_TO_EMAIL: str = os.getenv("REPLY_TO_EMAIL", "")
 
     # RAG Settings
     CHUNK_SIZE: int = 1000
