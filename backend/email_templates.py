@@ -47,7 +47,7 @@ def get_welcome_email_html(first_name: str) -> str:
             <td style="background:linear-gradient(135deg,#0d9488 0%,#0f766e 50%,#115e59 100%);padding:40px 40px 32px 40px;text-align:center;">
               <!-- Logo -->
               <img
-                src="https://onkeep.co/logo.png"
+                src="https://i.ibb.co/SX345WJg/photo-2026-02-18-14-07-39.jpg"
                 alt="KEEP"
                 width="120"
                 style="display:inline-block;width:120px;height:auto;"
