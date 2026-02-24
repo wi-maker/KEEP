@@ -185,6 +185,13 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[str] = None
 
+class GoogleExchangeRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+class GoogleExchangeResponse(BaseModel):
+    id_token: str
+
 # --- Admin Schemas ---
 class AdminOverview(BaseModel):
     total_users: int

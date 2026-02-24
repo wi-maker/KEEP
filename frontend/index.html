@@ -1109,6 +1109,7 @@
     // User must replace these with their own project values
     const SUPABASE_URL = 'https://obrguyijeairiokbnyzv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9icmd1eWlqZWFpcmlva2JueXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMDE0NDcsImV4cCI6MjA4Mzg3NzQ0N30.0h32ecqonTVbleN-CrXe9JR6Zc6epPnsHuVTEbcR-HE';
+    const GOOGLE_CLIENT_ID = '1096901848529-g5m6k2o326774q5r9962aam4kcvk6052.apps.googleusercontent.com';
 
     // Initialize Supabase with error handling
     let supabaseClient = null;
@@ -1124,6 +1125,7 @@
             onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
             signInWithOAuth: async () => ({ error: { message: 'Supabase SDK not loaded. Check internet connection.' } }),
             signInWithPassword: async () => ({ error: { message: 'Supabase SDK not loaded.' } }),
+            signInWithIdToken: async () => ({ error: { message: 'Supabase SDK not loaded.' } }),
             signOut: async () => ({ error: null })
           }
         };
@@ -1136,7 +1138,8 @@
           getSession: async () => ({ data: { session: null }, error: e }),
           onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
           signInWithOAuth: async () => ({ error: e }),
-          signInWithPassword: async () => ({ error: e })
+          signInWithPassword: async () => ({ error: e }),
+          signInWithIdToken: async () => ({ error: e })
         }
       };
       if (typeof app !== 'undefined' && app.toast) app.toast('Error initializing auth');
@@ -1146,6 +1149,34 @@
       ? 'http://localhost:8080'
       : 'https://keep-production-7d09.up.railway.app';
     const API_V1 = `${API_BASE_URL}/api/v1`;
+
+    // --- DIRECT GOOGLE OAUTH URL BUILDER ---
+    function getGoogleOAuthUrl(origin) {
+      if (!GOOGLE_CLIENT_ID) {
+        console.error("GOOGLE_CLIENT_ID is missing from the environment configuration.");
+        throw new Error("Missing Google Client ID");
+      }
+
+      // The exact redirect URI established in Google Console
+      const redirectUri = `${origin}/#auth`;
+
+      const options = {
+        redirect_uri: redirectUri,
+        client_id: GOOGLE_CLIENT_ID,
+        access_type: 'offline',
+        response_type: 'code',
+        prompt: 'consent',
+        scope: [
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/userinfo.email',
+        ].join(' '),
+        // Pass the origin as state so we can redirect cleanly upon return
+        state: encodeURIComponent(JSON.stringify({ returnTo: origin }))
+      };
+
+      const qs = new URLSearchParams(options);
+      return `https://accounts.google.com/o/oauth2/v2/auth?${qs.toString()}`;
+    }
 
     // --- STATE VARIABLES ---
     let currentUser = null;
@@ -1193,10 +1224,57 @@
 
     // --- AUTHENTICATION ---
 
+    // Helper to handle Google OAuth callback natively
+    async function handleOAuthCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+
+      if (code) {
+        console.log("Found OAuth code in URL, exchanging with backend...");
+
+        try {
+          const origin = window.location.origin;
+          const redirectUri = `${origin}/#auth`;
+
+          const response = await fetch(`${API_V1}/auth/google/exchange`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, redirect_uri: redirectUri })
+          });
+
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Failed to exchange authorization code');
+          }
+
+          const { id_token } = await response.json();
+
+          // Establish the Supabase session locally using the Google ID Token
+          const { error } = await supabaseClient.auth.signInWithIdToken({
+            provider: 'google',
+            token: id_token
+          });
+
+          if (error) throw error;
+
+          // Clean up the URL so it doesn't trigger on refresh
+          window.history.replaceState({}, document.title, window.location.pathname);
+          console.log("Successfully authenticated with Google");
+        } catch (e) {
+          console.error("OAuth Callback Error:", e);
+          if (typeof app !== 'undefined') app.toast("Login failed: " + e.message);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
+
     // Check session on load
     async function initAuth() {
       try {
         if (!supabaseClient) return;
+
+        // Process potential Google callback before checking the session
+        await handleOAuthCallback();
 
         const { data, error } = await supabaseClient.auth.getSession();
 
@@ -1533,11 +1611,8 @@
     async function signInWithGoogle() {
       setAuthLoading(true);
       try {
-        const { error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: getRedirectUrl() }
-        });
-        if (error) throw error;
+        const authUrl = getGoogleOAuthUrl(window.location.origin);
+        window.location.href = authUrl; // Hard redirect to Google
       } catch (e) {
         showAuthError(e.message);
         setAuthLoading(false);

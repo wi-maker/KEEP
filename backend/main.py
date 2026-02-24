@@ -17,6 +17,7 @@ import json
 import asyncio
 from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote, urlparse
+import httpx
 
 import models
 import schemas
@@ -81,6 +82,52 @@ async def root():
 # ============================================================================
 # AUTH ROUTES (Production: Supabase JWT)
 # ============================================================================
+
+@app.post(f"{settings.API_V1_STR}/auth/google/exchange", response_model=schemas.GoogleExchangeResponse)
+async def exchange_google_code(request: schemas.GoogleExchangeRequest):
+    """
+    Exchanges a Google OAuth authorization code for an ID token.
+    Used for the custom domain direct Google OAuth flow.
+    """
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google OAuth credentials are not configured on the server."
+        )
+
+    # Exchange code with Google
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": request.code,
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "redirect_uri": request.redirect_uri,
+        "grant_type": "authorization_code",
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(token_url, data=data)
+
+        if response.status_code != 200:
+            import logging
+            logging.error(f"Google OAuth Exchange Error: {response.text}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to exchange authorization code with Google."
+            )
+
+        tokens = response.json()
+        
+        # We need the id_token to feed into Supabase signInWithIdToken
+        id_token = tokens.get("id_token")
+        
+        if not id_token:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google did not return an ID token."
+            )
+
+        return schemas.GoogleExchangeResponse(id_token=id_token)
 
 @app.post(f"{settings.API_V1_STR}/auth/sync", response_model=schemas.User)
 def sync_user(
