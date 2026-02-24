@@ -19,9 +19,9 @@ Google needs to know that your Vercel/frontend domain is allowed to request logi
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
 2. Navigate to **APIs & Services** > **Credentials**.
 3. Edit your OAuth 2.0 Client ID (`1096901848529-g5m...`).
-4. Under **Authorized redirect URIs**, add your exact production URL for the KEEP frontend, exactly as it appears in the `window.location.origin` (e.g., `https://app.onkeep.co` or `https://keep-admin.vercel.app`), followed by `/#auth`.
-   - **Example:** `https://app.onkeep.co/#auth`
-   - *Note: Our frontend code appends `/#auth` as the redirect URI to prevent routing conflicts.*
+4. Under **Authorized redirect URIs**, add your exact production URL for the KEEP frontend, exactly as it appears in the `window.location.origin` (e.g., `https://app.onkeep.co` or `https://keep-admin.vercel.app`), without any trailing slashes or URL fragments.
+   - **Example:** `https://app.onkeep.co`
+   - *Note: Google strictly forbids URL fragments (like `#auth`) in redirect URIs.*
 5. Save the changes.
 
 ## Testing

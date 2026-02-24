@@ -1157,8 +1157,8 @@
         throw new Error("Missing Google Client ID");
       }
 
-      // The exact redirect URI established in Google Console
-      const redirectUri = `${origin}/#auth`;
+      // The exact redirect URI established in Google Console (fragments like #auth are forbidden by Google)
+      const redirectUri = origin;
 
       const options = {
         redirect_uri: redirectUri,
@@ -1234,7 +1234,7 @@
 
         try {
           const origin = window.location.origin;
-          const redirectUri = `${origin}/#auth`;
+          const redirectUri = origin;
 
           const response = await fetch(`${API_V1}/auth/google/exchange`, {
             method: 'POST',
