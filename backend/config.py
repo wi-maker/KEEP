@@ -31,7 +31,7 @@ class Settings:
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")
     
     # Embedding model (always uses Google API for ChromaDB compatibility)
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
+    EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     
     # Provider priority (comma-separated: openrouter,gemini)
     AI_PROVIDER_PRIORITY: str = os.getenv("AI_PROVIDER_PRIORITY", "openrouter,gemini")
