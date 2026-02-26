@@ -259,7 +259,7 @@ def ingest_medical_knowledge():
             try:
                 # Embed text
                 result = genai.embed_content(
-                    model="models/text-embedding-004",
+                    model="models/gemini-embedding-001",
                     content=chunk,
                     task_type="retrieval_document"
                 )

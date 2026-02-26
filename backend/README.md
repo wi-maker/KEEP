@@ -238,7 +238,7 @@ const data = await response.json();
 1. **Upload** → Save file
 2. **Extract** → OCR (images) or PyPDF2 (PDFs)
 3. **Chunk** → 500 chars with 100 overlap
-4. **Embed** → Google Gemini text-embedding-004
+4. **Embed** → Google Gemini gemini-embedding-001
 5. **Store** → ChromaDB with metadata
 6. **Analyze** → Gemini 2.5 Flash generates summary
 7. **Save** → Summary to PostgreSQL
