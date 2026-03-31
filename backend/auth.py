@@ -130,26 +130,11 @@ async def verify_token(
         )
     
     except jwt.InvalidTokenError as e:
-        # Fallback for ES256 tokens from Google/Supabase which we can't verify with the secret
-        # but we need to accept for the app to function.
-        try:
-            unverified_header = jwt.get_unverified_header(token)
-            if unverified_header.get('alg') == 'ES256':
-                logger.warning("Attempting to handle ES256 token without signature verification (Fallback)")
-                # Decode without verification
-                payload = jwt.decode(token, options={"verify_signature": False})
-                
-                # Check audience match to ensure it's still intended for us
-                if payload.get('aud') == 'authenticated':
-                    logger.warning("ACCEPTED unverified ES256 token for 'authenticated' audience")
-                    return TokenPayload(payload)
-        except Exception as fallback_error:
-            logger.error(f"Fallback/Debug auth failed: {fallback_error}")
-            
-        logger.warning(f"Invalid token: {e}")
+        logger.error(f"JWT verification failed: {e}. Ensure pyjwt[crypto] is installed for ES256 support.")
         raise HTTPException(
             status_code=401,
-            detail="Invalid authentication token"
+            detail="Invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"}
         )
 
 

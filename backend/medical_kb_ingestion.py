@@ -207,7 +207,7 @@ MEDICAL_KNOWLEDGE = [
 ]
 
 
-def chunk_text(text: str, chunk_size: int = 500) -> List[str]:
+def chunk_text(text: str, chunk_size: int = 1000) -> List[str]:
     """Simple text chunking"""
     words = text.split()
     chunks = []

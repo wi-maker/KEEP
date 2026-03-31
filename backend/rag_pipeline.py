@@ -161,10 +161,6 @@ class ChromaDBClient:
                 "include": ["documents", "metadatas", "distances"]
             }
             
-            # Add keyword search for hybrid mode
-            if query_text:
-                query_params["query_texts"] = [query_text]
-                logger.debug(f"Hybrid search: vector + keyword for '{query_text[:50]}...'")
             
             results = self.user_docs_collection.query(**query_params)
             return results
@@ -197,10 +193,6 @@ class ChromaDBClient:
                 "n_results": n_results,
                 "include": ["documents", "metadatas", "distances"]
             }
-            
-            # Add keyword search for hybrid mode
-            if query_text:
-                query_params["query_texts"] = [query_text]
             
             results = self.medical_kb_collection.query(**query_params)
             return results

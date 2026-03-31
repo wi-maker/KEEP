@@ -133,7 +133,7 @@ def extract_text_from_image(file_path: str) -> str:
             raise ValueError(f"Error extracting text from image: {str(e)}")
 
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> List[str]:
+def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
     """Split text into overlapping chunks with safeguards."""
     if not text:
         return []
