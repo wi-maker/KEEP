@@ -34,7 +34,7 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
 # Production Auth & Async
-PyJWT==2.8.0
+PyJWT[crypto]==2.8.0
 redis==5.0.1
 rq==1.15.1
 

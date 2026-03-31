@@ -4,10 +4,11 @@ FROM python:3.11-slim
 # Set the working directory inside the container
 WORKDIR /app
 
-# 1. Install System Dependencies (Tesseract & Database tools)
+# 1. Install System Dependencies (Tesseract & Database tools & crypto)
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     libpq-dev \
+    libffi-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
